@@ -1,0 +1,29 @@
+{
+  "name": "kratos-suno-prompt-monorepo",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Monorepo: backend FastAPI + packages/core (shared TS) + web (Vite+React) + mobile (Expo) + infra (AWS CDK)",
+  "scripts": {
+    "dev:web": "pnpm --filter @kratos-suno/web dev",
+    "dev:mobile": "pnpm --filter @kratos-suno/mobile start",
+    "dev:backend": "docker compose -f docker-compose.dev.yml up backend postgres",
+    "build:web": "pnpm --filter @kratos-suno/core build && pnpm --filter @kratos-suno/web build",
+    "build:core": "pnpm --filter @kratos-suno/core build",
+    "lint": "pnpm --recursive lint",
+    "typecheck": "pnpm --recursive typecheck",
+    "test": "pnpm --recursive test",
+    "cdk:synth": "pnpm --filter @kratos-suno/infra synth",
+    "cdk:diff": "pnpm --filter @kratos-suno/infra diff",
+    "cdk:deploy:staging": "pnpm --filter @kratos-suno/infra deploy:staging",
+    "cdk:deploy:prod": "pnpm --filter @kratos-suno/infra deploy:prod"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "prettier": "^3.3.3"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

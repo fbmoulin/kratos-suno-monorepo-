@@ -1,0 +1,110 @@
+name: Mobile CI/CD
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "packages/core/**"
+      - "packages/mobile/**"
+      - ".github/workflows/mobile.yml"
+  pull_request:
+    paths:
+      - "packages/core/**"
+      - "packages/mobile/**"
+      - ".github/workflows/mobile.yml"
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -------------------------------------------------------------------
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @kratos-suno/core typecheck
+      - run: pnpm --filter @kratos-suno/mobile typecheck
+
+  # -------------------------------------------------------------------
+  build-preview:
+    name: EAS build (preview)
+    runs-on: ubuntu-latest
+    needs: typecheck
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Setup Expo + EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: EAS Build — preview (Android + iOS)
+        working-directory: packages/mobile
+        run: eas build --profile preview --platform all --non-interactive --no-wait
+
+  # -------------------------------------------------------------------
+  build-production:
+    name: EAS build (production)
+    runs-on: ubuntu-latest
+    needs: typecheck
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Setup Expo + EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: EAS Build — production
+        working-directory: packages/mobile
+        run: eas build --profile production --platform all --non-interactive --no-wait
+
+      - name: EAS Submit to stores
+        working-directory: packages/mobile
+        # Manual gate recomendado — descomentar quando contas dev estiverem prontas
+        if: false
+        run: eas submit --profile production --platform all --non-interactive

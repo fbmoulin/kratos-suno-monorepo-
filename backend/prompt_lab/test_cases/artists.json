@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Coldplay",
+    "subject": "Coldplay",
+    "expected_genre_contains": ["alternative", "rock"],
+    "expected_bpm_range": [70, 140],
+    "forbidden_in_output": ["coldplay", "chris martin"]
+  },
+  {
+    "name": "Billie Eilish",
+    "subject": "Billie Eilish",
+    "expected_genre_contains": ["pop"],
+    "expected_bpm_range": [60, 110],
+    "forbidden_in_output": ["billie", "eilish"]
+  },
+  {
+    "name": "Bohemian Rhapsody (song)",
+    "subject": "Bohemian Rhapsody",
+    "expected_genre_contains": ["rock"],
+    "expected_bpm_range": [60, 140],
+    "forbidden_in_output": ["bohemian rhapsody", "queen", "freddie mercury"]
+  },
+  {
+    "name": "Radiohead",
+    "subject": "Radiohead",
+    "expected_genre_contains": ["rock"],
+    "expected_bpm_range": [70, 140],
+    "forbidden_in_output": ["radiohead", "thom yorke"]
+  },
+  {
+    "name": "Nirvana",
+    "subject": "Nirvana",
+    "expected_genre_contains": ["grunge", "rock"],
+    "expected_bpm_range": [90, 180],
+    "forbidden_in_output": ["nirvana", "kurt cobain"]
+  },
+  {
+    "name": "Djavan",
+    "subject": "Djavan",
+    "expected_genre_contains": ["mpb", "brazilian"],
+    "expected_bpm_range": [60, 140],
+    "forbidden_in_output": ["djavan"]
+  },
+  {
+    "name": "Anitta",
+    "subject": "Anitta",
+    "expected_genre_contains": ["funk", "pop"],
+    "expected_bpm_range": [90, 140],
+    "forbidden_in_output": ["anitta"]
+  },
+  {
+    "name": "Kendrick Lamar",
+    "subject": "Kendrick Lamar",
+    "expected_genre_contains": ["hip hop", "rap"],
+    "expected_bpm_range": [70, 110],
+    "forbidden_in_output": ["kendrick", "lamar"]
+  }
+]

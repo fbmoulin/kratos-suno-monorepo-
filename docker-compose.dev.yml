@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: kratos_suno
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DEBUG: "true"
+      FRONTEND_ORIGIN: http://localhost:5173
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      DNA_EXTRACTOR_MODEL: claude-haiku-4-5-20251001
+      AUDIO_DNA_MODEL: claude-sonnet-4-6
+      ACTIVE_PROMPT_VERSION: v1_baseline
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/kratos_suno
+      MAX_AUDIO_UPLOAD_MB: 25
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

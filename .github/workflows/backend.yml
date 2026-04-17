@@ -1,0 +1,207 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+# Cancela runs antigos do mesmo branch
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write # OIDC
+  contents: read
+  pull-requests: write # para comentar resultado do pytest
+
+env:
+  AWS_REGION: us-east-1
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # -------------------------------------------------------------------
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff pytest-cov
+
+      - name: Ruff lint
+        run: ruff check app/ tests/
+
+      - name: Run tests
+        env:
+          ANTHROPIC_API_KEY: test-key-for-unit-tests
+          SHARED_SECRET: test-shared-secret-at-least-16-chars
+          DATABASE_URL: sqlite+aiosqlite:///:memory:
+        run: pytest tests/ -v --cov=app --cov-report=term
+
+  # -------------------------------------------------------------------
+  deploy-staging:
+    name: Deploy to staging
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.service_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          REPO: kratos-suno-backend-staging
+          SHA: ${{ github.sha }}
+        run: |
+          cd backend
+          IMAGE_TAG="$REGISTRY/$REPO:$SHA"
+          LATEST_TAG="$REGISTRY/$REPO:latest"
+          docker build -t "$IMAGE_TAG" -t "$LATEST_TAG" .
+          docker push "$IMAGE_TAG"
+          docker push "$LATEST_TAG"
+          echo "image_uri=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Trigger App Runner deployment
+        id: deploy
+        env:
+          SERVICE_ARN: ${{ secrets.APP_RUNNER_SERVICE_ARN_STAGING }}
+        run: |
+          OPERATION_ID=$(aws apprunner start-deployment \
+            --service-arn "$SERVICE_ARN" \
+            --query 'OperationId' \
+            --output text)
+          echo "Operation ID: $OPERATION_ID"
+          SERVICE_URL=$(aws apprunner describe-service \
+            --service-arn "$SERVICE_ARN" \
+            --query 'Service.ServiceUrl' \
+            --output text)
+          echo "service_url=https://$SERVICE_URL" >> $GITHUB_OUTPUT
+
+      - name: Wait for deployment (max 10min)
+        env:
+          SERVICE_ARN: ${{ secrets.APP_RUNNER_SERVICE_ARN_STAGING }}
+        run: |
+          for i in {1..60}; do
+            STATUS=$(aws apprunner describe-service --service-arn "$SERVICE_ARN" \
+              --query 'Service.Status' --output text)
+            echo "[$i/60] Status: $STATUS"
+            if [ "$STATUS" = "RUNNING" ]; then
+              echo "✅ Deploy concluído"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "❌ Deploy não completou em 10min"
+          exit 1
+
+      - name: Smoke test
+        run: |
+          for i in {1..10}; do
+            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+              "${{ steps.deploy.outputs.service_url }}/health" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Health check OK"
+              exit 0
+            fi
+            echo "Tentativa $i/10 — HTTP $STATUS"
+            sleep 5
+          done
+          exit 1
+
+  # -------------------------------------------------------------------
+  deploy-prod:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.service_url }}
+    # NOTE: repo Settings → Environments → production → Required reviewers
+    # para gate manual antes de subir para prod.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          REPO: kratos-suno-backend-prod
+          SHA: ${{ github.sha }}
+        run: |
+          cd backend
+          IMAGE_TAG="$REGISTRY/$REPO:$SHA"
+          LATEST_TAG="$REGISTRY/$REPO:latest"
+          docker build -t "$IMAGE_TAG" -t "$LATEST_TAG" .
+          docker push "$IMAGE_TAG"
+          docker push "$LATEST_TAG"
+
+      - name: Trigger App Runner deployment
+        id: deploy
+        env:
+          SERVICE_ARN: ${{ secrets.APP_RUNNER_SERVICE_ARN_PROD }}
+        run: |
+          aws apprunner start-deployment --service-arn "$SERVICE_ARN"
+          SERVICE_URL=$(aws apprunner describe-service --service-arn "$SERVICE_ARN" \
+            --query 'Service.ServiceUrl' --output text)
+          echo "service_url=https://$SERVICE_URL" >> $GITHUB_OUTPUT
+
+      - name: Wait & smoke test
+        env:
+          SERVICE_ARN: ${{ secrets.APP_RUNNER_SERVICE_ARN_PROD }}
+        run: |
+          for i in {1..60}; do
+            STATUS=$(aws apprunner describe-service --service-arn "$SERVICE_ARN" \
+              --query 'Service.Status' --output text)
+            [ "$STATUS" = "RUNNING" ] && break
+            sleep 10
+          done
+          curl -sf "${{ steps.deploy.outputs.service_url }}/health" || exit 1
+          echo "✅ Production deploy OK"

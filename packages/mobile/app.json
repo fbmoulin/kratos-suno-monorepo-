@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "Kratos Suno Prompt",
+    "slug": "kratos-suno-prompt",
+    "version": "0.3.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "kratossuno",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kratossuno.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Gravar áudio para gerar prompts musicais a partir de uma melodia cantarolada.",
+        "NSDocumentsFolderUsageDescription": "Selecionar arquivos de áudio (MP3, WAV) para análise."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a0a"
+      },
+      "package": "com.kratossuno.app",
+      "permissions": ["RECORD_AUDIO", "READ_EXTERNAL_STORAGE"]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-secure-store",
+        { "faceIDPermission": "Autenticar para acessar suas credenciais Spotify." }
+      ],
+      [
+        "expo-av",
+        { "microphonePermission": "Gravar áudio para gerar prompts." }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      }
+    },
+    "owner": "felipemoulin"
+  }
+}

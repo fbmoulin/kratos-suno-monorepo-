@@ -1,0 +1,65 @@
+# ---- Dependencies ----
+node_modules/
+.pnpm-store/
+.pnpm-debug.log
+
+# ---- Build outputs ----
+dist/
+build/
+.next/
+.vite/
+*.tsbuildinfo
+
+# ---- Python backend ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+venv/
+.venv/
+
+# ---- Environment ----
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ---- Expo / React Native ----
+.expo/
+.expo-shared/
+expo-env.d.ts
+*.orig.*
+web-build/
+ios/Pods/
+android/app/build/
+android/build/
+android/.gradle/
+
+# ---- CDK ----
+cdk.out/
+cdk.context.json
+*.js
+!jest.config.js
+!babel.config.js
+!metro.config.js
+
+# ---- AWS / OS ----
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# ---- Prompt Lab outputs ----
+backend/prompt_lab/results/*.json
+backend/prompt_lab/results/*.csv
+!backend/prompt_lab/results/.gitkeep
+
+# ---- Logs ----
+*.log
+logs/

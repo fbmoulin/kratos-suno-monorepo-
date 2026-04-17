@@ -1,0 +1,33 @@
+{
+  "name": "@kratos-suno/infra",
+  "version": "0.3.0",
+  "private": true,
+  "bin": {
+    "cdk": "bin/app.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy:staging": "cdk deploy --all --context env=staging --require-approval broadening",
+    "deploy:prod": "cdk deploy --all --context env=prod --require-approval broadening",
+    "destroy:staging": "cdk destroy --all --context env=staging",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'infra: lint não configurado'"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.13",
+    "@types/node": "^22.7.4",
+    "aws-cdk": "^2.160.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.160.0",
+    "constructs": "^10.4.2"
+  }
+}
