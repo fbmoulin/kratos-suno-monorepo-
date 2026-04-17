@@ -25,6 +25,7 @@ import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as cwActions from "aws-cdk-lib/aws-cloudwatch-actions";
 import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as logs from "aws-cdk-lib/aws-logs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
@@ -115,6 +116,23 @@ export class BackendStack extends cdk.Stack {
     [anthropicKey, sharedSecret, databaseUrl, spotifyClientId].forEach((s) =>
       s.grantRead(instanceRole),
     );
+
+    // -------------------------------------------------------------------
+    // 3b. CloudWatch LogGroup — ownership + retention
+    //    App Runner auto-creates /aws/apprunner/<service>/... com retention
+    //    infinita por padrão. Declarar o LogGroup via CDK com o mesmo nome
+    //    antecipa a criação e aplica retention policy (30d staging, 90d prod).
+    // -------------------------------------------------------------------
+    const logGroup = new logs.LogGroup(this, "BackendLogGroup", {
+      logGroupName: `/aws/apprunner/kratos-suno-backend-${config.name}`,
+      retention:
+        config.name === "prod"
+          ? logs.RetentionDays.THREE_MONTHS
+          : logs.RetentionDays.ONE_MONTH,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+    // Referência para evitar unused-variable lint; App Runner consumirá implicitamente.
+    void logGroup;
 
     // -------------------------------------------------------------------
     // 4. App Runner service
