@@ -21,6 +21,7 @@ from __future__ import annotations
 import secrets
 from datetime import datetime, timedelta, timezone
 
+import structlog
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 
@@ -37,6 +38,8 @@ from app.services.spotify_client import (
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+log = structlog.get_logger("spotify")
 
 
 # ---------------------------------------------------------------------------
@@ -101,7 +104,12 @@ async def _process_spotify_callback(
         # Busca perfil básico pra exibir nome
         try:
             profile = await client.get_current_user(tokens["access_token"])
-        except Exception:
+        except Exception as exc:
+            log.warning(
+                "spotify.profile.fetch_failed",
+                exc_type=type(exc).__name__,
+                exc_msg=str(exc),
+            )
             profile = {}
 
     # Atualiza sessão
