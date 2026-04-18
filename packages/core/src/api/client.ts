@@ -40,7 +40,11 @@ export interface ApiClient {
 
   // Auth (Spotify PKCE)
   getAuthStatus(): Promise<AuthStatus>;
-  initiateSpotifyLogin(): Promise<SpotifyAuthURL>;
+  /**
+   * W1-B: ``platform`` hints the backend whether to use the web callback
+   * (cookie-based) or the mobile callback (JWT + deep link).
+   */
+  initiateSpotifyLogin(platform?: "web" | "mobile"): Promise<SpotifyAuthURL>;
   logout(): Promise<void>;
 
   // Spotify
@@ -74,8 +78,10 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
 
     getAuthStatus: () => request<AuthStatus>(config, "/api/v1/auth/status"),
 
-    initiateSpotifyLogin: () =>
-      request<SpotifyAuthURL>(config, "/api/v1/auth/spotify/login"),
+    initiateSpotifyLogin: (platform = "web") =>
+      request<SpotifyAuthURL>(config, "/api/v1/auth/spotify/login", {
+        query: { platform },
+      }),
 
     logout: () => request<void>(config, "/api/v1/auth/logout", { method: "POST" }),
 

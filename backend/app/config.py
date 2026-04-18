@@ -77,6 +77,18 @@ class Settings(BaseSettings):
         default="",
         description="Required in production. Localhost only acceptable in dev.",
     )
+    spotify_mobile_redirect_uri: str = Field(
+        default="",
+        description=(
+            "W1-B: mobile-specific Spotify redirect URI — e.g. "
+            "https://api.example.com/api/v1/auth/spotify/mobile-callback. "
+            "Empty = mobile flow disabled."
+        ),
+    )
+    spotify_mobile_scheme: str = Field(
+        default="kratossuno://spotify-connected",
+        description="W1-B: deep-link URL used to bounce back into the Expo app.",
+    )
     spotify_api_base: str = "https://api.spotify.com/v1"
     spotify_auth_base: str = "https://accounts.spotify.com"
     # Scopes mínimos — só leitura de top artists e profile
@@ -113,6 +125,15 @@ class Settings(BaseSettings):
 
     # Observability
     log_format: Literal["json", "console"] = "console"
+
+    # -----------------------------------------------------------------------
+    # JWT (W1-B) — bearer tokens for mobile clients
+    # -----------------------------------------------------------------------
+    jwt_secret_key: str = Field(
+        default="",
+        description="HS256 signing key — 32+ random hex chars. Empty = dev mode (insecure).",
+    )
+    jwt_ttl_seconds: int = 604800  # 7 days
 
 
 @lru_cache

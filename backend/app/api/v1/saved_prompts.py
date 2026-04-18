@@ -1,7 +1,9 @@
 """Rotas CRUD para saved prompts.
 
-Prompts são vinculados à session_id (cookie). Isso permite uso anônimo
+Prompts são vinculados à session_id. Isso permite uso anônimo
 (sem login Spotify) e também identifica prompts de usuários logados.
+
+W1-B: session_id é resolvido via cookie (web) OU Authorization: Bearer (mobile).
 
   POST   /api/v1/prompts           -> cria novo prompt salvo
   GET    /api/v1/prompts           -> lista prompts da sessão atual
@@ -12,10 +14,11 @@ from __future__ import annotations
 
 import secrets
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.auth_spotify import resolve_session_id
 from app.config import settings
 from app.db.models import SavedPrompt
 from app.db.session import get_db
@@ -29,18 +32,19 @@ from app.schemas.auth import (
 router = APIRouter(prefix="/prompts", tags=["saved_prompts"])
 
 
-def _ensure_session_id(
+async def _ensure_session_id(
+    request: Request,
     response: Response,
-    kratos_session: str | None,
 ) -> str:
-    """Retorna session_id existente ou cria um novo (+ cookie).
+    """Retorna session_id existente (cookie ou Bearer) ou cria um novo (+ cookie).
 
-    Permite uso anônimo — a cada request sem cookie, o backend cria um
-    session_id descartável e retorna via cookie. Assim o usuário pode
-    salvar prompts mesmo sem Spotify, e eles persistem nas próximas visitas.
+    Permite uso anônimo — a cada request sem auth, o backend cria um
+    session_id descartável e retorna via cookie. Bearer-authed (mobile)
+    clients always have a sid from the JWT.
     """
-    if kratos_session:
-        return kratos_session
+    sid = await resolve_session_id(request)
+    if sid:
+        return sid
 
     new_id = secrets.token_urlsafe(32)
     response.set_cookie(
@@ -57,12 +61,12 @@ def _ensure_session_id(
 @router.post("", response_model=SavedPromptResponse, status_code=status.HTTP_201_CREATED)
 async def create_saved_prompt(
     payload: SavedPromptCreate,
+    request: Request,
     response: Response,
-    kratos_session: str | None = Cookie(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> SavedPromptResponse:
     """Cria um novo prompt salvo vinculado à sessão."""
-    session_id = _ensure_session_id(response, kratos_session)
+    session_id = await _ensure_session_id(request, response)
 
     row = SavedPrompt(
         session_id=session_id,
@@ -91,14 +95,14 @@ async def create_saved_prompt(
 
 @router.get("", response_model=SavedPromptListResponse)
 async def list_saved_prompts(
+    request: Request,
     response: Response,
-    kratos_session: str | None = Cookie(default=None),
     db: AsyncSession = Depends(get_db),
     limit: int = 50,
     offset: int = 0,
 ) -> SavedPromptListResponse:
     """Lista prompts salvos da sessão atual (ordenados por mais recentes)."""
-    session_id = _ensure_session_id(response, kratos_session)
+    session_id = await _ensure_session_id(request, response)
 
     stmt = (
         select(SavedPrompt)
@@ -129,16 +133,17 @@ async def list_saved_prompts(
 @router.get("/{prompt_id}", response_model=SavedPromptResponse)
 async def get_saved_prompt(
     prompt_id: int,
-    kratos_session: str | None = Cookie(default=None),
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> SavedPromptResponse:
     """Detalha um prompt salvo específico."""
-    if not kratos_session:
+    session_id = await resolve_session_id(request)
+    if not session_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sem sessão")
 
     stmt = select(SavedPrompt).where(
         SavedPrompt.id == prompt_id,
-        SavedPrompt.session_id == kratos_session,
+        SavedPrompt.session_id == session_id,
     )
     result = await db.execute(stmt)
     row = result.scalar_one_or_none()
@@ -161,16 +166,17 @@ async def get_saved_prompt(
 @router.delete("/{prompt_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_prompt(
     prompt_id: int,
-    kratos_session: str | None = Cookie(default=None),
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """Remove um prompt salvo (só da sessão atual)."""
-    if not kratos_session:
+    session_id = await resolve_session_id(request)
+    if not session_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sem sessão")
 
     stmt = select(SavedPrompt).where(
         SavedPrompt.id == prompt_id,
-        SavedPrompt.session_id == kratos_session,
+        SavedPrompt.session_id == session_id,
     )
     result = await db.execute(stmt)
     row = result.scalar_one_or_none()

@@ -24,7 +24,23 @@ from app.infra.rate_limit import setup_rate_limit
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup e shutdown assíncrono. Reserve para conexões DB/cache quando adicionar."""
+    """Startup e shutdown assíncrono.
+
+    W1-B: attach a persistent session store so sessions survive restarts.
+    If the DB is unreachable, log and fall back to in-memory only (current
+    behaviour) — this must never break the app at startup.
+    """
+    from app.db.session import AsyncSessionLocal
+    from app.services.persistent_session import PersistentSessionStore
+    from app.services.session_store import get_session_store
+
+    try:
+        persistent = PersistentSessionStore(session_factory=AsyncSessionLocal)
+        get_session_store().attach_persistent(persistent)
+    except Exception:
+        # Non-fatal — in-memory sessions still work, just not durable
+        pass
+
     # TODO(fase-4): inicializar background task de cleanup de sessões expiradas
     yield
 

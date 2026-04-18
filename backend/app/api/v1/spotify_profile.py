@@ -1,10 +1,14 @@
-"""Rota GET /api/v1/spotify/profile — perfil de gosto do usuário."""
+"""Rota GET /api/v1/spotify/profile — perfil de gosto do usuário.
+
+W1-B: session_id é resolvido via cookie (web) OU Authorization: Bearer (mobile).
+"""
 from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
+from app.api.v1.auth_spotify import resolve_session_id
 from app.schemas.auth import TasteProfile
 from app.services.session_store import SessionStore, get_session_store
 from app.services.spotify_client import SpotifyAPIError, SpotifyClient
@@ -15,21 +19,22 @@ router = APIRouter(prefix="/spotify", tags=["spotify"])
 
 @router.get("/profile", response_model=TasteProfile)
 async def get_taste_profile(
+    request: Request,
     time_range: Literal["short_term", "medium_term", "long_term"] = Query(
         default="medium_term",
         description="short_term=4 semanas, medium_term=6 meses, long_term=anos",
     ),
-    kratos_session: str | None = Cookie(default=None),
     store: SessionStore = Depends(get_session_store),
 ) -> TasteProfile:
     """Retorna top artists do usuário + gêneros dominantes."""
-    if not kratos_session:
+    session_id = await resolve_session_id(request)
+    if not session_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Não autenticado — faça login com Spotify primeiro",
         )
 
-    session = await store.get(kratos_session)
+    session = await store.get(session_id)
     if session is None or not session.is_authenticated:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
