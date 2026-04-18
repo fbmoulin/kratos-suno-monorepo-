@@ -73,6 +73,18 @@ class Settings(BaseSettings):
     # -----------------------------------------------------------------------
     spotify_client_id: str = Field(default="", description="Opcional — app funciona sem Spotify")
     spotify_redirect_uri: str = "http://127.0.0.1:8000/api/v1/auth/spotify/callback"
+    spotify_mobile_redirect_uri: str = Field(
+        default="",
+        description=(
+            "W1-B: mobile-specific Spotify redirect URI — e.g. "
+            "https://api.example.com/api/v1/auth/spotify/mobile-callback. "
+            "Empty = mobile flow disabled."
+        ),
+    )
+    spotify_mobile_scheme: str = Field(
+        default="kratossuno://spotify-connected",
+        description="W1-B: deep-link URL used to bounce back into the Expo app.",
+    )
     spotify_api_base: str = "https://api.spotify.com/v1"
     spotify_auth_base: str = "https://accounts.spotify.com"
     # Scopes mínimos — só leitura de top artists e profile

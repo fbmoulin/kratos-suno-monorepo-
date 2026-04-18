@@ -75,8 +75,13 @@ class SpotifyClient:
     def build_authorize_url(
         state: str,
         code_challenge: str,
+        redirect_uri: str | None = None,
     ) -> str:
-        """Monta a URL para redirecionar o usuário ao consent do Spotify."""
+        """Monta a URL para redirecionar o usuário ao consent do Spotify.
+
+        W1-B: ``redirect_uri`` allows the mobile flow to point Spotify at
+        ``/auth/spotify/mobile-callback`` instead of the default web callback.
+        """
         if not settings.spotify_client_id:
             raise SpotifyAuthError(
                 "SPOTIFY_CLIENT_ID não configurado. Adicione no .env para usar Spotify."
@@ -85,7 +90,7 @@ class SpotifyClient:
             "response_type": "code",
             "client_id": settings.spotify_client_id,
             "scope": " ".join(settings.spotify_scopes),
-            "redirect_uri": settings.spotify_redirect_uri,
+            "redirect_uri": redirect_uri or settings.spotify_redirect_uri,
             "state": state,
             "code_challenge_method": "S256",
             "code_challenge": code_challenge,
@@ -96,13 +101,19 @@ class SpotifyClient:
         self,
         code: str,
         code_verifier: str,
+        redirect_uri: str | None = None,
     ) -> dict[str, Any]:
-        """Troca o authorization code por access_token + refresh_token."""
+        """Troca o authorization code por access_token + refresh_token.
+
+        W1-B: ``redirect_uri`` must match the one used in ``build_authorize_url``;
+        Spotify enforces exact equality of redirect_uri between authorize and
+        token steps.
+        """
         assert self._http is not None
         data = {
             "grant_type": "authorization_code",
             "code": code,
-            "redirect_uri": settings.spotify_redirect_uri,
+            "redirect_uri": redirect_uri or settings.spotify_redirect_uri,
             "client_id": settings.spotify_client_id,
             "code_verifier": code_verifier,
         }
