@@ -78,15 +78,23 @@ Session persistence: `PersistentSessionStore` (Postgres) hidrata in-memory cache
 
 ## Pending / Next steps
 
-**Imediato (não bloqueantes):**
-- Smoke test físico Spotify mobile (requer celular + SPOTIFY_CLIENT_ID real + deploy staging)
-- Preencher `ANTHROPIC_API_KEY` real em `.env` (já está em `.env` local mas gitignored)
+**Wave 2a concluída — MVP webapp focus (2026-04-18):**
+- ✅ Error boundaries web — `packages/web/src/components/ErrorBoundary.tsx` envolvendo `<App />` no `main.tsx`
+- ✅ Frontend tests — vitest + testing-library + jsdom, 8/8 tests green (5 ErrorBoundary + 3 App smoke)
+- Commit: `c8b6fc6 test(web): wave 2a — ErrorBoundary + vitest + 8 tests (MVP webapp)`
 
-**Wave 2 candidato:**
-- Frontend tests (vitest + 20 casos)
-- Accessibility labels mobile (zero → completo)
+**Imediato (MVP blockers, não-agent):**
+- Preencher `ANTHROPIC_API_KEY` real em `.env` (gitignored) para smoke local
+- Deploy staging AWS (comando em README.md / DEPLOYMENT.md) — CDK synth validado, 2 stacks (`kratos-suno-backend-staging`, `kratos-suno-cicd-staging`)
+- Preencher 3 secrets no console AWS: ANTHROPIC_API_KEY, DATABASE_URL (Neon), SPOTIFY_CLIENT_ID
+- Smoke test físico Spotify mobile (requer celular + SPOTIFY_CLIENT_ID real + deploy staging)
+
+**Deferido para pós-MVP:**
+- Accessibility labels mobile (zero → completo) — mobile não é MVP target
 - Theme mobile bypass fix (hardcodes `#0a0a0a` → `theme.colors.*`)
-- Error boundaries web
+- Error boundaries mobile (Expo)
+- Expandir cobertura de testes web (atualmente 8 tests; meta pós-MVP ~20)
+- ESLint config no `packages/web/` (script existe mas binário ausente — script `lint` falha)
 
 **Deploy quando quiser:**
 ```bash

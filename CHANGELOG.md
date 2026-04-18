@@ -7,6 +7,34 @@ Semver: [semver.org](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Wave 2a — 2026-04-18 (MVP webapp focus)
+
+**Reframe:** user decidiu pivot pra webapp full-stack como MVP; mobile a11y + theme fixes deferidos pós-MVP. Spotify deep link (Wave 1) mantido já que tá shipado.
+
+#### Added
+- `packages/web/src/components/ErrorBoundary.tsx` — React class-based Error Boundary envolvendo `<App />` no `main.tsx`. Fallback PT-BR com botão retry, Chakra-styled, error details apenas em dev (`import.meta.env.DEV`). Props opcionais: `fallback` (render prop custom) + `onError` (hook para Sentry futuro)
+- `packages/web/src/main.tsx` — wraps `<App />` em `<ErrorBoundary>`
+- `packages/web/vitest.config.ts` + `src/test/setup.ts` + `src/test/test-utils.tsx` — infra vitest (jsdom + testing-library + renderWithProviders helper com ChakraProvider)
+- `packages/web/src/App.test.tsx` — 3 smoke tests (título + tabs, OAuth callback auto-switch, disclaimer 200-char)
+- `packages/web/src/components/ErrorBoundary.test.tsx` — 5 tests cobrindo: children render normal, fallback em erro, `onError` callback, reset button, custom fallback prop
+
+#### Dev deps
+- `vitest ^2.1.2`, `@testing-library/{react,jest-dom,user-event}`, `jsdom ^25.0.1` (+84 packages transitivos)
+
+#### Scripts
+- `pnpm --filter @kratos-suno/web test` / `test:watch`
+
+#### Verificação
+- Web tests: **8/8 passed**
+- Web typecheck: ✅ clean
+- Web build: ✅ success (530KB gzip — warning pré-existente, não relacionado)
+- Backend: 90/90 still green (zero regression)
+- CDK: 3/3 tests + `pnpm synth` clean → deploy path staging validado
+
+#### Deferido para pós-MVP
+- Accessibility labels mobile (Expo `accessibilityLabel` props)
+- Theme mobile bypass fix (hardcoded `#0a0a0a` → `theme.colors.*`)
+
 ### Wave 1 — 2026-04-18 (23 commits aplicados a master)
 
 #### Added
