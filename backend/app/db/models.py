@@ -72,3 +72,33 @@ class SavedPrompt(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
+
+
+class UserSession(Base):
+    """Persistent session (W1-B) — hydrates in-memory store on backend restart.
+
+    Stores the Spotify tokens associated with a session_id so that restarting
+    the FastAPI process does not invalidate existing mobile/web sessions.
+    The in-memory ``SessionStore`` continues to be the hot path; this table
+    is the durable cold store consulted on cache miss.
+    """
+
+    __tablename__ = "user_session"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    spotify_user_id: Mapped[str | None] = mapped_column(
+        String(100), nullable=True, index=True
+    )
+    access_token: Mapped[str] = mapped_column(String(500))
+    refresh_token: Mapped[str] = mapped_column(String(500))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    display_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
