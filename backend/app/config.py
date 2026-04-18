@@ -90,6 +90,15 @@ class Settings(BaseSettings):
     dna_cache_enabled: bool = True
     dna_cache_ttl_days: int = 30
 
+    # -----------------------------------------------------------------------
+    # JWT (W1-B) — bearer tokens for mobile clients
+    # -----------------------------------------------------------------------
+    jwt_secret_key: str = Field(
+        default="",
+        description="HS256 signing key — 32+ random hex chars. Empty = dev mode (insecure).",
+    )
+    jwt_ttl_seconds: int = 604800  # 7 days
+
 
 @lru_cache
 def get_settings() -> Settings:

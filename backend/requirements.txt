@@ -29,6 +29,9 @@ pytest==8.3.3
 pytest-asyncio==0.24.0
 pytest-mock==3.14.0
 
+# JWT for mobile bearer tokens (W1-B)
+PyJWT==2.9.0
+
 # Dev
 python-dotenv==1.0.1
 ruff==0.6.9
