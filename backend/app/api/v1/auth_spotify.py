@@ -17,6 +17,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from fastapi.responses import RedirectResponse
 
 from app.config import settings
+from app.infra.rate_limit import rate_limit
 from app.schemas.auth import AuthStatusResponse, SpotifyAuthURLResponse
 from app.services.session_store import SessionStore, get_session_store
 from app.services.spotify_client import (
@@ -52,6 +53,7 @@ def _set_session_cookie(response: Response, session_id: str) -> None:
 @router.get("/spotify/login", response_model=SpotifyAuthURLResponse)
 async def spotify_login(
     response: Response,
+    _rl: None = Depends(rate_limit),
     store: SessionStore = Depends(get_session_store),
 ) -> SpotifyAuthURLResponse:
     """Inicia fluxo PKCE. Cria sessão, gera verifier/challenge, retorna URL do Spotify."""
@@ -80,6 +82,7 @@ async def spotify_callback(
     code: str,
     state: str,
     kratos_session: str | None = Cookie(default=None),
+    _rl: None = Depends(rate_limit),
     store: SessionStore = Depends(get_session_store),
 ) -> RedirectResponse:
     """Callback do Spotify. Troca code por tokens e redireciona para o frontend."""

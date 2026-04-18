@@ -11,6 +11,10 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 
 from app.config import settings
+from app.infra.auth import AuthContext, require_auth
+from app.infra.budget import check_budget_audio, record_audio_spend
+from app.infra.compliance import extract_forbidden_terms_from_hint
+from app.infra.rate_limit import rate_limit
 from app.schemas.sonic_dna import GenerateResponse
 from app.services.dna_audio_extractor import AudioDNAExtractor
 from app.services.dna_text_extractor import DNAExtractionError
@@ -31,7 +35,11 @@ def get_audio_extractor() -> AudioDNAExtractor:
 async def generate_from_audio(
     file: UploadFile = File(..., description="Arquivo de áudio (MP3/WAV/FLAC/M4A/OGG)"),
     user_hint: str | None = Form(default=None, max_length=200),
+    artist_to_avoid: str | None = Form(default=None, max_length=200),
     variants_to_generate: int = Form(default=3, ge=1, le=3),
+    auth_ctx: AuthContext = Depends(require_auth),
+    _rl: None = Depends(rate_limit),
+    _bg: None = Depends(check_budget_audio),
     extractor: AudioDNAExtractor = Depends(get_audio_extractor),
 ) -> GenerateResponse:
     """Análise híbrida: librosa extrai BPM/key precisos, Claude interpreta o resto.
@@ -95,6 +103,10 @@ async def generate_from_audio(
             detail=f"Erro inesperado: {type(exc).__name__}",
         )
 
+    # Injeta forbidden_terms do hint/artist_to_avoid (W1-A compliance hardening)
+    extra_forbidden = extract_forbidden_terms_from_hint(user_hint, artist_to_avoid)
+    dna.forbidden_terms = sorted(set(list(dna.forbidden_terms) + extra_forbidden))
+
     # Comprime em variantes
     try:
         variants = compress_all(dna, variants_to_generate)
@@ -104,9 +116,11 @@ async def generate_from_audio(
             detail=f"Falha de compliance: {exc}",
         )
 
-    return GenerateResponse(
+    response = GenerateResponse(
         subject=f"[audio] {file.filename}",
         sonic_dna=dna,
         variants=variants,
         lyric_template=build_lyric_template(dna),
     )
+    await record_audio_spend(auth_ctx.subject_id)
+    return response

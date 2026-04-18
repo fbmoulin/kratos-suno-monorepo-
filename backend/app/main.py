@@ -18,6 +18,8 @@ from app.api.v1 import (
     spotify_profile,
 )
 from app.config import settings
+from app.infra.logging import setup_logging
+from app.infra.rate_limit import setup_rate_limit
 
 
 @asynccontextmanager
@@ -37,6 +39,10 @@ app = FastAPI(
     version="0.2.0",
     lifespan=lifespan,
 )
+
+# Infra wiring (W1-A): structured logging + rate limiter singleton
+setup_logging(app)
+setup_rate_limit(app)
 
 # CORS — precisa allow_credentials=True para cookies Spotify
 app.add_middleware(

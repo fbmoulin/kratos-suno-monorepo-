@@ -10,6 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.db.session import get_db
+from app.infra.auth import AuthContext, require_auth
+from app.infra.budget import check_budget_text, record_text_spend
+from app.infra.rate_limit import rate_limit
 from app.schemas.sonic_dna import GenerateFromTextRequest, GenerateResponse
 from app.services.dna_cache import DNACache
 from app.services.dna_text_extractor import DNAExtractionError, TextDNAExtractor
@@ -31,6 +34,9 @@ def get_text_extractor() -> TextDNAExtractor:
 @router.post("/text", response_model=GenerateResponse)
 async def generate_from_text(
     request: GenerateFromTextRequest,
+    auth_ctx: AuthContext = Depends(require_auth),
+    _rl: None = Depends(rate_limit),
+    _bg: None = Depends(check_budget_text),
     extractor: TextDNAExtractor = Depends(get_text_extractor),
     db: AsyncSession = Depends(get_db),
 ) -> GenerateResponse:
@@ -83,9 +89,12 @@ async def generate_from_text(
             detail=f"Falha de compliance na geração: {exc}",
         )
 
-    return GenerateResponse(
+    response = GenerateResponse(
         subject=request.subject,
         sonic_dna=dna,
         variants=variants,
         lyric_template=build_lyric_template(dna),
     )
+    # Record spend after success (best-effort, do not block response)
+    await record_text_spend(auth_ctx.subject_id)
+    return response
