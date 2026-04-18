@@ -62,7 +62,32 @@ Vite resolve workspace packages nativamente via `package.json`'s `main`/`types` 
 
 ## Lockfile
 
-Um único `pnpm-lock.yaml` na raiz. Nunca comite `package-lock.json` ou `yarn.lock` — eles brigam com o pnpm. CI roda `pnpm install --frozen-lockfile`.
+Um único `pnpm-lock.yaml` na raiz (committed, mandatório). Nunca comite `package-lock.json` ou `yarn.lock` — eles brigam com o pnpm. CI e Docker build rodam `pnpm install --frozen-lockfile`. Se alterar um `package.json`, commite também o `pnpm-lock.yaml` atualizado.
+
+## Backend `app/infra/` (Wave 1)
+
+O backend ganhou um package cross-cutting para concerns de infra (auth, rate-limit, budget, logging, compliance). A arquitetura usa Protocol interfaces com factories que escolhem a implementação conforme config:
+
+```python
+# backend/app/infra/factories.py
+@lru_cache
+def get_auth_provider() -> AuthProvider:
+    match settings.auth_provider:
+        case "shared_secret": return SharedSecretAuthProvider(...)   # stage 1
+        case "clerk": raise NotImplementedError("stage 3")            # futuro
+        case "api_key": raise NotImplementedError("stage 4")          # futuro
+```
+
+As rotas usam `Depends(require_auth)` + `Depends(rate_limit)` + `Depends(check_budget_text|audio)` — tudo pluggable. Trocar `RATE_LIMIT_BACKEND=memory` para `redis` via env não requer mudança em código de domínio, só adicionar a classe `RedisRateLimiter(RateLimiter)`.
+
+Merge-safe pattern em `main.py`:
+```python
+setup_logging(app)        # structlog + request-id middleware + global exception handler
+setup_rate_limit(app)     # warm up singleton
+setup_budget(app)         # warm up + startup hooks
+```
+
+Cada `setup_X(app)` é uma linha, permitindo múltiplos agents trabalharem em paralelo sem merge conflicts.
 
 ## Quando sair do monorepo
 

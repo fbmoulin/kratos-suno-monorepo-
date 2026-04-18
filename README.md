@@ -28,26 +28,55 @@ kratos-suno-monorepo/
 
 ## Quick start — dev local
 
-Precisa de Node 20+, pnpm 9+, Python 3.12, Docker.
+Precisa de Node 20+, pnpm 9+, Python 3.12, Docker. Sem pnpm global? `corepack enable && corepack prepare pnpm@9.12.0 --activate`.
+
+**Opção 1 — tudo via Docker (recomendado para primeiro run):**
 
 ```bash
-# 1. Instala deps dos packages TS
+# 1. Instala deps TS
 pnpm install
 
-# 2. Backend via Docker (Postgres + FastAPI)
-cp backend/.env.example backend/.env
-# edite backend/.env preenchendo ANTHROPIC_API_KEY
-pnpm dev:backend
+# 2. Configura chave Anthropic
+cp .env.example .env
+# edite .env: ANTHROPIC_API_KEY=sk-ant-api03-...
+# (demais vars W1 têm defaults seguros — auth disabled em dev, rate limit 100/h, budget $2/dia)
 
-# 3. Em outro terminal — web
-pnpm dev:web
+# 3. Sobe stack (postgres + backend; roda alembic upgrade head antes)
+docker-compose -f docker-compose.dev.yml up -d postgres backend
+
+# 4. Verifica saúde
+curl -s http://localhost:8000/health | python -m json.tool
+# → status: ok, anthropic_key: configured, budget_remaining: 2.00
+
+# 5. Gera um prompt
+curl -X POST http://localhost:8000/api/v1/generate/text \
+  -H "Content-Type: application/json" \
+  -d '{"subject":"Djavan"}' | python -m json.tool
+
+# 6. Web (opcional)
+docker-compose -f docker-compose.dev.yml up -d web
 # → http://localhost:5173
+```
 
-# 4. Em outro terminal — mobile (opcional)
+**Opção 2 — web em Vite dev com HMR:**
+
+```bash
+docker-compose -f docker-compose.dev.yml up -d postgres backend
+pnpm dev:web   # vite → http://localhost:5173 com proxy para 8000
+```
+
+**Opção 3 — mobile:**
+
+```bash
 cp packages/mobile/.env.example packages/mobile/.env
-# edite EXPO_PUBLIC_API_BASE apontando pro backend
-pnpm dev:mobile
-# → escaneie QR code com Expo Go
+# EXPO_PUBLIC_API_BASE=http://<your-ip>:8000 (ou ngrok)
+pnpm dev:mobile   # scan QR com Expo Go
+```
+
+**Para parar:**
+```bash
+docker-compose -f docker-compose.dev.yml down        # preserva dados postgres
+docker-compose -f docker-compose.dev.yml down -v     # deleta volume postgres
 ```
 
 ## Fases do projeto
@@ -56,12 +85,13 @@ Concluídas:
 - **Fase 1**: skill `suno-style-prompt.skill` para Claude Code
 - **Fase 2**: app web MVP (texto + áudio)
 - **Fase 3**: integração Spotify + cache Postgres + saved prompts CRUD
-- **v0.3.0 (atual)**: monorepo com core compartilhado, mobile Expo scaffold, AWS CDK, GitHub Actions
+- **v0.3.0**: monorepo com core compartilhado, mobile Expo scaffold, AWS CDK, GitHub Actions
+- **Wave 1 (atual)**: backend hardening (pluggable auth/rate-limit/budget), structlog + request-id, async audio fix, compliance heuristic, mobile Spotify deep link (JWT bearer), persistent session (survives restart), CDK log retention, web Dockerfile pnpm. **90 tests backend verdes**. Ver `CHANGELOG.md` para detalhes.
 
-Próximas (specs separadas):
-- **Track A (hardening)**: SharedSecret auth, rate-limit, budget, structlog, async audio fix
-- **Stage 2 deploy**: Cloudflare Turnstile + Redis (Upstash) rate-limit
-- **Stage 3**: Clerk auth + Postgres user quota
+Próximas (specs/plans separadas):
+- **Wave 2**: frontend tests (vitest), accessibility mobile, theme consistency, error boundaries
+- **Stage 2 deploy**: Cloudflare Turnstile + Redis (Upstash) rate-limit — `RATE_LIMIT_BACKEND=redis` config flip
+- **Stage 3**: Clerk auth + Postgres user quota — `AUTH_PROVIDER=clerk` + nova classe `ClerkAuthProvider`
 - **Mobile v2**: mic recording, share extension, push notifications
 
 ## Docs

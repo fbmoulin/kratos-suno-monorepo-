@@ -26,9 +26,29 @@ Este é o ponto mais delicado do mobile hoje. O fluxo web funciona assim: user c
 
 No mobile não funciona assim por três motivos. Primeiro, `WebBrowser.openAuthSessionAsync` abre um browser in-app (SFAuthenticationSession no iOS, Chrome Custom Tab no Android) que fecha ao retornar via deep link. Segundo, o app precisa ter um scheme registrado (`kratossuno://`) para capturar o retorno. Terceiro, como o backend hoje seta cookie na resposta, aquele cookie fica no browser in-app — não no app mobile — e é perdido ao fechar.
 
-A solução, **ainda não implementada no backend**, tem essa forma: criar `/api/v1/auth/spotify/mobile-callback` que, em vez de setar cookie e redirecionar pra frontend web, emite um JWT (ou session token) e redireciona para `kratossuno://spotify-connected?token=XXX`. O `useAuth` hook no mobile captura isso via `expo-linking`, salva o token em `SecureStore`, e `getBearerToken` em `apiClient.ts` passa a usar esse token.
+A solução **foi implementada na Wave 1** (2026-04-18):
 
-Enquanto isso não existe, a aba "Spotify" no mobile mostra o botão de login mas o flow quebra ao voltar ao app. Solução temporária durante o dev: use só o web pro Spotify, ou use o scheme de URL do Spotify Dashboard apontando pro URL de produção da app (requer HTTPS).
+1. Mobile inicia: `GET /auth/spotify/login?platform=mobile` — backend lê a flag, monta a URL de authorize com `redirect_uri=SPOTIFY_MOBILE_REDIRECT_URI` (ex: `https://api.example.com/api/v1/auth/spotify/mobile-callback`), salva o `redirect_uri` na sessão para parear com o token exchange
+2. Expo abre: `WebBrowser.openAuthSessionAsync(url, "kratossuno://spotify-connected")` — browser nativo
+3. Spotify redireciona para `api.example.com/auth/spotify/mobile-callback?code=...&state=...`
+4. Backend: `spotify_mobile_callback()` valida state, troca code por tokens (usando o mesmo redirect_uri — Spotify enforça equality), fetches profile, escreve sessão, assina JWT HS256 via `services/jwt_utils.py::sign_session_token(session_id, secret, ttl)` e retorna `302 → kratossuno://spotify-connected?token=<jwt>`. Em erro, retorna `302 → kratossuno://spotify-connected?error=<code>`
+5. Mobile captura: `packages/mobile/app/_layout.tsx` tem `Linking.addEventListener("url", handler)` para warm start + `Linking.getInitialURL()` para cold start
+6. `packages/mobile/src/deepLinks.ts::handleSpotifyConnectedUrl(url)` extrai `?token=...` e salva via `expo-secure-store` com key `"kratos.jwt"`
+7. `useFocusEffect(() => refresh())` na tab Spotify re-checa auth state automaticamente
+8. Requests subsequentes: `packages/mobile/src/apiClient.ts` usa `sessionStrategy: "bearer"` + `getBearerToken` lendo `expo-secure-store` → todo request envia `Authorization: Bearer <jwt>`
+9. Backend: `resolve_session_id(request)` resolve session_id de cookie (web) OU Bearer JWT (mobile) — cookie tem prioridade se ambos presentes
+
+Session persistence: `PersistentSessionStore` grava em Postgres (`user_session` table, migration 003). Se o backend reiniciar, `SessionStore.get()` em miss consulta o DB e rehidra o cache in-memory — o usuário mobile continua logado sem precisar refazer OAuth.
+
+Configuração necessária:
+```
+SPOTIFY_CLIENT_ID=<seu-client-id>
+SPOTIFY_REDIRECT_URI=https://api.example.com/api/v1/auth/spotify/callback   # web
+SPOTIFY_MOBILE_REDIRECT_URI=https://api.example.com/api/v1/auth/spotify/mobile-callback   # mobile
+JWT_SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
+```
+
+No dashboard do Spotify (developer.spotify.com/dashboard), registre AMBOS os redirect URIs. Smoke test end-to-end requer celular físico + backend deployado (ou ngrok expondo localhost). Com tudo configurado, o flow completa sem intervenção manual — sem precisar clicar "Check again".
 
 ## EAS Build
 
