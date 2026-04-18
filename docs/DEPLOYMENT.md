@@ -92,7 +92,7 @@ No repo GitHub, vá em Settings → Secrets and variables → Actions. Adicione:
 
 Para o workflow de backend: `AWS_DEPLOY_ROLE_ARN_STAGING` e `AWS_DEPLOY_ROLE_ARN_PROD` (vem do output `GitHubActionsRoleArn` da CicdStack), `APP_RUNNER_SERVICE_ARN_STAGING` e `APP_RUNNER_SERVICE_ARN_PROD` (output `ServiceArn` da BackendStack).
 
-Para o web: `CLOUDFLARE_API_TOKEN` (criado em dash.cloudflare.com/profile/api-tokens com scope "Cloudflare Pages:Edit"), `CLOUDFLARE_ACCOUNT_ID` (aparece no dashboard), `VITE_SHARED_SECRET` (o mesmo valor que o frontend usa).
+Para o web: `CLOUDFLARE_API_TOKEN` (criado em dash.cloudflare.com/profile/api-tokens com scope "Cloudflare Pages:Edit"), `CLOUDFLARE_ACCOUNT_ID` (aparece no dashboard). **Nota:** `VITE_SHARED_SECRET` NÃO precisa ser adicionado como GitHub Secret — o workflow `web.yml` busca dinamicamente do AWS Secrets Manager (`kratos-suno/${env}/shared-secret`) via OIDC, usando o mesmo role de deploy. Single source of truth, zero drift.
 
 Para o mobile: `EXPO_TOKEN` (expo.dev → settings → access tokens).
 
