@@ -5,9 +5,9 @@ import type {
   TasteProfile,
 } from "@kratos-suno/core";
 import { useAuth } from "@kratos-suno/core";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FlatList, Image, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
@@ -30,13 +30,23 @@ const TIME_RANGE_OPTIONS: Array<{ value: SpotifyTimeRange; label: string }> = [
 export default function SpotifyScreen() {
   const { auth, isLoading: authLoading, loginWithSpotify, logout, refresh } = useAuth({
     client: api,
+    // W1-B: mobile flow — backend issues JWT via /mobile-callback + deep link
+    platform: "mobile",
     onOpenAuthUrl: async (url) => {
-      // Abre browser nativo para o flow PKCE do Spotify.
-      // Depois do callback, o usuário volta ao app (via deep link kratossuno://)
-      // — exige config adicional no backend para aceitar mobile callback.
+      // Abre browser nativo para o flow PKCE do Spotify. Depois do callback,
+      // o backend redireciona para kratossuno://spotify-connected?token=<jwt>
+      // — o listener em app/_layout.tsx captura e salva o token.
       await WebBrowser.openAuthSessionAsync(url, "kratossuno://spotify-connected");
     },
   });
+
+  // W1-B: re-check auth when the tab gains focus — the deep link handler
+  // in _layout.tsx persists the JWT, and refresh() picks up the new state.
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
 
   const [profile, setProfile] = useState<TasteProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
