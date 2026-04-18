@@ -2,6 +2,31 @@
 
 Este documento descreve o deploy de ponta a ponta em produção. A stack combina AWS (backend), Cloudflare Pages (web), Neon (Postgres serverless) e EAS (mobile).
 
+URLs canônicas (produção):
+
+- **Web** (Cloudflare Pages): `https://kratos-suno.felipemoulin.com`
+- **API** (App Runner): `https://api.kratos-suno.felipemoulin.com`
+
+Use-as explicitamente sempre que o documento precisar referenciar os endpoints — nunca conflate web e API no mesmo hostname.
+
+## Prerequisites Checklist
+
+Antes de iniciar, tenha TODOS estes itens prontos:
+
+- [ ] AWS account com billing ativo + usuário admin
+- [ ] AWS CLI v2 instalada (`aws --version`)
+- [ ] Node.js 20+ e pnpm 9+ instalados globalmente (`corepack enable`)
+- [ ] AWS CDK CLI (`npm install -g aws-cdk`)
+- [ ] Docker Desktop OU Docker Engine 20+
+- [ ] Anthropic API key (saldo mínimo recomendado: $20)
+- [ ] Domínio registrado (Route 53, Cloudflare ou qualquer registrar)
+- [ ] Cloudflare account (tier free resolve)
+- [ ] Neon account (tier free resolve)
+- [ ] GitHub repo (fork/clone) com Actions habilitadas
+- [ ] Expo account (para mobile; opcional se for só backend)
+- [ ] Apple Developer account + App Store Connect (para submit iOS; opcional)
+- [ ] Google Play Console + service account JSON (para submit Android; opcional)
+
 ## Visão geral de custos
 
 Stage 1 (pessoal/staging) fica em torno de $30–70/mês, dominado pelo custo da API Anthropic (~$10–40/mês com cap de $2/dia configurado no backend). A infra em si sai em torno de $20–30: App Runner com 0.25 vCPU auto-scale ($20–25), Cloudflare Pages gratuito, Neon free tier, Route 53 $0.50/mês por hosted zone.
@@ -57,7 +82,7 @@ No dashboard Cloudflare, vá em Workers & Pages → Create → Pages → Connect
 - Build command: `pnpm install && pnpm --filter @kratos-suno/core build && pnpm --filter @kratos-suno/web build`
 - Build output directory: `packages/web/dist`
 - Root directory: deixe vazio (monorepo root)
-- Environment variables: `VITE_API_BASE=https://<backend-url>`, `VITE_SHARED_SECRET=<valor do secret shared-secret>`
+- Environment variables: `VITE_API_BASE=https://api.kratos-suno.felipemoulin.com` (URL da API — ajuste para o seu domínio), `VITE_SHARED_SECRET=<valor do secret shared-secret>`
 
 Opcional: Cloudflare pode conectar direto ao GitHub para auto-deploy. Alternativa: usar o workflow `web.yml` que faz deploy via wrangler action (precisa do `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID` nos secrets do GitHub).
 
@@ -72,6 +97,20 @@ Para o web: `CLOUDFLARE_API_TOKEN` (criado em dash.cloudflare.com/profile/api-to
 Para o mobile: `EXPO_TOKEN` (expo.dev → settings → access tokens).
 
 Em Settings → Environments, crie `production` e ative "Required reviewers" adicionando você mesmo — isso força aprovação manual antes de deploys pra prod.
+
+## DNS Setup
+
+Assumindo domínio custom `felipemoulin.com` (substitua pelo seu):
+
+1. **Web** (`kratos-suno.felipemoulin.com`, Cloudflare Pages): no dashboard Cloudflare → Pages → projeto → Custom domain → adicionar `kratos-suno.felipemoulin.com`.
+   Cloudflare auto-cria o CNAME — sem DNS manual se a zona já está na Cloudflare. Certificado emitido automaticamente (Universal SSL).
+
+2. **API** (`api.kratos-suno.felipemoulin.com`, App Runner):
+   - Capture a URL default do App Runner (ex: `abc123.us-east-1.awsapprunner.com`).
+   - No Route 53 (ou no seu DNS): crie `CNAME api.kratos-suno.felipemoulin.com → abc123.us-east-1.awsapprunner.com`.
+   - No console App Runner → Custom domains → adicione `api.kratos-suno.felipemoulin.com`. AWS provisiona certificado ACM automaticamente (1–2h para propagar).
+
+Depois de validado, atualize a env var `VITE_API_BASE` do deploy Cloudflare Pages para `https://api.kratos-suno.felipemoulin.com` e trigger um redeploy do web.
 
 ## Fluxo de deploy típico
 
