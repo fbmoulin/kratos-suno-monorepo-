@@ -20,6 +20,12 @@ export interface UseAuthOptions {
 
   /** Se false, não faz refresh automático no mount (útil em testes). */
   autoLoad?: boolean;
+
+  /**
+   * W1-B: "mobile" hints the backend to use the mobile-callback flow
+   * (JWT + deep link). Defaults to "web" (cookie flow).
+   */
+  platform?: "web" | "mobile";
 }
 
 export interface UseAuthReturn {
@@ -41,6 +47,7 @@ export function useAuth({
   client,
   onOpenAuthUrl,
   autoLoad = true,
+  platform = "web",
 }: UseAuthOptions): UseAuthReturn {
   const [auth, setAuth] = useState<AuthStatus | null>(null);
   const [isLoading, setIsLoading] = useState(autoLoad);
@@ -64,9 +71,9 @@ export function useAuth({
   }, [autoLoad, refresh]);
 
   const loginWithSpotify = useCallback(async () => {
-    const { authorize_url } = await client.initiateSpotifyLogin();
+    const { authorize_url } = await client.initiateSpotifyLogin(platform);
     await onOpenAuthUrl(authorize_url);
-  }, [client, onOpenAuthUrl]);
+  }, [client, onOpenAuthUrl, platform]);
 
   const logout = useCallback(async () => {
     await client.logout();
