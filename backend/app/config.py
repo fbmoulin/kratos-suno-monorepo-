@@ -7,6 +7,7 @@ barata e Sonnet para interpretação de áudio, por exemplo.
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -72,7 +73,10 @@ class Settings(BaseSettings):
     # Spotify OAuth (Fase 3)
     # -----------------------------------------------------------------------
     spotify_client_id: str = Field(default="", description="Opcional — app funciona sem Spotify")
-    spotify_redirect_uri: str = "http://127.0.0.1:8000/api/v1/auth/spotify/callback"
+    spotify_redirect_uri: str = Field(
+        default="",
+        description="Required in production. Localhost only acceptable in dev.",
+    )
     spotify_api_base: str = "https://api.spotify.com/v1"
     spotify_auth_base: str = "https://accounts.spotify.com"
     # Scopes mínimos — só leitura de top artists e profile
@@ -89,6 +93,26 @@ class Settings(BaseSettings):
     # -----------------------------------------------------------------------
     dna_cache_enabled: bool = True
     dna_cache_ttl_days: int = 30
+
+    # -----------------------------------------------------------------------
+    # Infra (W1-A): pluggable backends for stage 1→4
+    # -----------------------------------------------------------------------
+    auth_provider: Literal["none", "shared_secret", "clerk", "api_key"] = "shared_secret"
+    rate_limit_backend: Literal["memory", "redis"] = "memory"
+    budget_backend: Literal["memory", "redis", "postgres"] = "memory"
+
+    # Stage-1 limits
+    shared_secret_key: str = Field(
+        default="",
+        description="Stage 1: X-Kratos-Key header value. Empty = disabled (dev).",
+    )
+    rate_limit_per_hour: int = 20
+    daily_budget_usd: float = 2.0
+    cost_per_text_generation_usd: float = 0.002
+    cost_per_audio_generation_usd: float = 0.01
+
+    # Observability
+    log_format: Literal["json", "console"] = "console"
 
 
 @lru_cache

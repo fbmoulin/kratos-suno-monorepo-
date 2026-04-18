@@ -32,3 +32,6 @@ pytest-mock==3.14.0
 # Dev
 python-dotenv==1.0.1
 ruff==0.6.9
+
+# Observability (W1-A)
+structlog>=24.4.0,<25

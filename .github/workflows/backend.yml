@@ -60,6 +60,18 @@ jobs:
           DATABASE_URL: sqlite+aiosqlite:///:memory:
         run: pytest tests/ -v --cov=app --cov-report=term
 
+      - name: Verify alembic migrations apply
+        run: |
+          # Spin up ephemeral Postgres
+          docker run -d --name pg-test -e POSTGRES_PASSWORD=test -p 5433:5432 postgres:16-alpine
+          for i in 1 2 3 4 5; do
+            pg_isready -h localhost -p 5433 && break
+            sleep 2
+          done
+          DATABASE_URL=postgresql+asyncpg://postgres:test@localhost:5433/postgres \
+            alembic upgrade head
+          docker rm -f pg-test
+
   # -------------------------------------------------------------------
   deploy-staging:
     name: Deploy to staging

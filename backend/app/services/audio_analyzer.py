@@ -11,6 +11,7 @@ Por que híbrido:
 """
 from __future__ import annotations
 
+import asyncio
 import io
 from dataclasses import dataclass
 from pathlib import Path
@@ -121,6 +122,10 @@ class AudioFeatureExtractor:
             sample_rate=sr,
         )
 
+    async def extract_async(self, source: str | Path | IO[bytes]) -> AudioFeatures:
+        """Non-blocking wrapper — runs librosa in threadpool."""
+        return await asyncio.to_thread(self.extract, source)
+
     # -----------------------------------------------------------------------
     # Algoritmos
     # -----------------------------------------------------------------------
@@ -218,3 +223,14 @@ def generate_spectrogram_png(
     plt.close(fig)
     buf.seek(0)
     return buf.getvalue()
+
+
+async def generate_spectrogram_png_async(
+    source: str | Path | IO[bytes],
+    duration_seconds: float = 30.0,
+    sample_rate: int = 22050,
+) -> bytes:
+    """Non-blocking wrapper — runs matplotlib+librosa in threadpool."""
+    return await asyncio.to_thread(
+        generate_spectrogram_png, source, duration_seconds, sample_rate
+    )
