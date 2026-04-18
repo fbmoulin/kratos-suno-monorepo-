@@ -11,7 +11,9 @@ WORKDIR /app
 
 # Copia requirements primeiro (melhor caching de layer)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# --timeout=300 + retries resolve ReadTimeoutError em redes lentas
+# (librosa+matplotlib+numpy pull ~500MB de wheels)
+RUN pip install --no-cache-dir --timeout=300 --retries=5 -r requirements.txt
 
 # Copia código
 COPY . .

@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: kratos_suno
     ports:
-      - "5432:5432"
+      - "5433:5432"   # host:container — 5432 is often taken on dev machines
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -30,17 +30,28 @@ services:
       ACTIVE_PROMPT_VERSION: v1_baseline
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/kratos_suno
       MAX_AUDIO_UPLOAD_MB: 25
+      # W1-A: infra stage-1 (empty SHARED_SECRET_KEY = auth disabled for dev)
+      AUTH_PROVIDER: shared_secret
+      SHARED_SECRET_KEY: ${SHARED_SECRET_KEY:-}
+      RATE_LIMIT_PER_HOUR: "${RATE_LIMIT_PER_HOUR:-100}"
+      DAILY_BUDGET_USD: "${DAILY_BUDGET_USD:-2.0}"
+      LOG_FORMAT: "${LOG_FORMAT:-console}"
+      # W1-B: JWT + Spotify mobile (empty = mobile flow disabled)
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
+      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID:-}
+      SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI:-http://localhost:8000/api/v1/auth/spotify/callback}
+      SPOTIFY_MOBILE_REDIRECT_URI: ${SPOTIFY_MOBILE_REDIRECT_URI:-}
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
-  frontend:
+  web:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: packages/web/Dockerfile
     ports:
       - "5173:80"
     depends_on:
