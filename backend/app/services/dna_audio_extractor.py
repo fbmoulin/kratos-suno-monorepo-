@@ -25,7 +25,7 @@ from app.schemas.sonic_dna import SonicDNA
 from app.services.audio_analyzer import (
     AudioFeatureExtractor,
     AudioFeatures,
-    generate_spectrogram_png,
+    generate_spectrogram_png_async,
 )
 from app.services.dna_text_extractor import DNAExtractionError
 
@@ -104,14 +104,14 @@ class AudioDNAExtractor:
     ) -> tuple[SonicDNA, AudioFeatures]:
         """Extrai DNA e retorna também as features para exibição ao usuário."""
 
-        # 1. Análise determinística (librosa)
-        features = self.audio_extractor.extract(audio_source)
+        # 1. Análise determinística (librosa) — non-blocking
+        features = await self.audio_extractor.extract_async(audio_source)
 
-        # 2. Espectrograma (imagem)
+        # 2. Espectrograma (imagem) — non-blocking
         # Rewind se é file-like
         if hasattr(audio_source, "seek"):
             audio_source.seek(0)
-        spectrogram_bytes = generate_spectrogram_png(audio_source)
+        spectrogram_bytes = await generate_spectrogram_png_async(audio_source)
         spectrogram_b64 = base64.b64encode(spectrogram_bytes).decode()
 
         # 3. Prompt user
