@@ -1,10 +1,12 @@
 import {
   Box,
   Button,
+  Flex,
   FormControl,
   FormHelperText,
   FormLabel,
   Input,
+  Text,
   VStack,
 } from "@chakra-ui/react";
 import { useState } from "react";
@@ -13,6 +15,9 @@ interface Props {
   onSubmit: (subject: string) => void;
   isLoading: boolean;
 }
+
+const MAX_SUBJECT_LENGTH = 200;
+const WARNING_THRESHOLD = 180;
 
 export function TextInput({ onSubmit, isLoading }: Props) {
   const [subject, setSubject] = useState("");
@@ -25,6 +30,8 @@ export function TextInput({ onSubmit, isLoading }: Props) {
     }
   };
 
+  const isWarning = subject.length > WARNING_THRESHOLD;
+
   return (
     <Box as="form" onSubmit={handleSubmit}>
       <VStack spacing={4} align="stretch">
@@ -36,12 +43,25 @@ export function TextInput({ onSubmit, isLoading }: Props) {
             placeholder="Ex: Coldplay, Bohemian Rhapsody, Djavan"
             size="lg"
             isDisabled={isLoading}
+            maxLength={MAX_SUBJECT_LENGTH}
             autoFocus
           />
-          <FormHelperText>
-            O sistema extrai o "DNA sonoro" e gera prompts legalmente seguros
-            (sem citar nomes próprios).
-          </FormHelperText>
+          <Flex justify="space-between" align="baseline" mt={1}>
+            <FormHelperText mt={0}>
+              O sistema extrai o "DNA sonoro" e gera prompts legalmente seguros
+              (sem citar nomes próprios).
+            </FormHelperText>
+            <Text
+              data-testid="subject-char-counter"
+              data-warning={isWarning ? "true" : undefined}
+              fontSize="xs"
+              color={isWarning ? "red.400" : "gray.400"}
+              flexShrink={0}
+              ml={2}
+            >
+              {subject.length}/{MAX_SUBJECT_LENGTH}
+            </Text>
+          </Flex>
         </FormControl>
         <Button
           type="submit"

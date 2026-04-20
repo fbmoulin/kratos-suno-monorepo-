@@ -9,7 +9,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useCallback, useState } from "react";
-import { useDropzone } from "react-dropzone";
+import { useDropzone, type FileRejection } from "react-dropzone";
 import { AudioLoadingStatus } from "./AudioLoadingStatus";
 
 interface Props {
@@ -26,6 +26,7 @@ const ACCEPTED = {
 };
 
 const MAX_SIZE_MB = 25;
+const MAX_HINT_LENGTH = 200;
 
 export function AudioUpload({ onSubmit, isLoading }: Props) {
   const [file, setFile] = useState<File | null>(null);
@@ -36,6 +37,8 @@ export function AudioUpload({ onSubmit, isLoading }: Props) {
     setError(null);
     const f = acceptedFiles[0];
     if (!f) return;
+    // Defensive: dropzone's maxSize routes oversized files to onDropRejected,
+    // but keep the manual check as belt-and-suspenders.
     if (f.size > MAX_SIZE_MB * 1024 * 1024) {
       setError(`Arquivo excede ${MAX_SIZE_MB}MB`);
       return;
@@ -43,9 +46,24 @@ export function AudioUpload({ onSubmit, isLoading }: Props) {
     setFile(f);
   }, []);
 
+  const onDropRejected = useCallback((rejections: FileRejection[]) => {
+    const reason = rejections[0]?.errors[0];
+    if (reason?.code === "file-invalid-type") {
+      setError(
+        "Formato não suportado. Use MP3, WAV, FLAC, M4A ou OGG.",
+      );
+    } else if (reason?.code === "file-too-large") {
+      setError(`Arquivo excede ${MAX_SIZE_MB}MB`);
+    } else {
+      setError(reason?.message || "Arquivo inválido");
+    }
+  }, []);
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected,
     accept: ACCEPTED,
+    maxSize: MAX_SIZE_MB * 1024 * 1024,
     multiple: false,
     disabled: isLoading,
   });
@@ -103,6 +121,7 @@ export function AudioUpload({ onSubmit, isLoading }: Props) {
           onChange={(e) => setUserHint(e.target.value)}
           placeholder='Ex: "sertanejo universitário", "indie rock dos anos 2000"'
           isDisabled={isLoading}
+          maxLength={MAX_HINT_LENGTH}
         />
         <FormHelperText>
           Ajuda o modelo a interpretar corretamente gêneros regionais.
