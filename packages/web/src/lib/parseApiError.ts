@@ -15,19 +15,24 @@ export interface ParsedApiError {
   };
 }
 
-function spotifyLoginRedirect(): void {
-  const baseURL = import.meta.env.VITE_API_BASE || "";
-  window.location.href = `${baseURL}/api/v1/auth/spotify/login?platform=web`;
+export interface ParseApiErrorOptions {
+  /** Called when the classified error needs the user to re-authenticate with Spotify. */
+  onReconnectSpotify?: () => void;
 }
 
-export function parseApiError(err: unknown): ParsedApiError {
+export function parseApiError(
+  err: unknown,
+  opts?: ParseApiErrorOptions,
+): ParsedApiError {
   if (err instanceof ApiHttpError) {
     if (err.code === "E_AUTH_MISSING") {
       return {
         title: "Sessão expirada",
         description: "Reconecte com o Spotify para continuar.",
         status: "error",
-        action: { label: "Reconectar Spotify", onClick: spotifyLoginRedirect },
+        action: opts?.onReconnectSpotify
+          ? { label: "Reconectar Spotify", onClick: opts.onReconnectSpotify }
+          : undefined,
       };
     }
     if (err.code === "E_TIMEOUT") {
@@ -77,6 +82,8 @@ export function parseApiError(err: unknown): ParsedApiError {
     }
   }
 
+  // Fallback — unclassified. Log for production debugging.
+  console.error("[parseApiError] Unclassified error", err);
   const message = err instanceof Error ? err.message : "";
   return {
     title: "Erro",

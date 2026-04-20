@@ -18,7 +18,12 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { ApiHttpError, type GenerateResponse, type PromptSource } from "@kratos-suno/core";
+import {
+  ApiHttpError,
+  useAuth,
+  type GenerateResponse,
+  type PromptSource,
+} from "@kratos-suno/core";
 import { api } from "./apiClient";
 import { AudioUpload } from "./components/AudioUpload";
 import { ResultsDisplay } from "./components/ResultsDisplay";
@@ -37,6 +42,12 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [tabIndex, setTabIndex] = useState(0);
   const toast = useToast();
+  const { loginWithSpotify } = useAuth({
+    client: api,
+    onOpenAuthUrl: (url) => {
+      window.location.href = url;
+    },
+  });
 
   // Detecta retorno do callback Spotify (?spotify=connected) e muda para a aba
   useEffect(() => {
@@ -55,7 +66,7 @@ export default function App() {
   }, [toast]);
 
   const handleError = (err: unknown) => {
-    const parsed = parseApiError(err);
+    const parsed = parseApiError(err, { onReconnectSpotify: loginWithSpotify });
     const requestId = err instanceof ApiHttpError ? err.requestId : undefined;
     toast({
       duration: 6000,
@@ -77,7 +88,7 @@ export default function App() {
               {parsed.description}
               {requestId && (
                 <Text as="span" display="block" fontSize="xs" opacity={0.75} mt={1}>
-                  ID: {requestId.slice(0, 8)}
+                  ID: {requestId}
                 </Text>
               )}
             </AlertDescription>

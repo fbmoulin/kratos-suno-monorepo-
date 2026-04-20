@@ -1,17 +1,47 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { ApiHttpError } from "@kratos-suno/core";
 import { parseApiError } from "./parseApiError";
 
 describe("parseApiError", () => {
-  it("maps E_AUTH_MISSING to session-expired error with reconnect action", () => {
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    // Silence console.error in tests that intentionally trigger the fallback.
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    errorSpy.mockRestore();
+  });
+
+  it("maps E_AUTH_MISSING to session-expired error without action when no callback provided", () => {
     const err = new ApiHttpError(401, "E_AUTH_MISSING", "Auth missing", "req-1");
     const parsed = parseApiError(err);
+    expect(parsed.title).toBe("Sessão expirada");
+    expect(parsed.description).toBe("Reconecte com o Spotify para continuar.");
+    expect(parsed.status).toBe("error");
+    expect(parsed.action).toBeUndefined();
+  });
+
+  it("maps E_AUTH_MISSING to session-expired error with reconnect action when callback provided", () => {
+    const onReconnectSpotify = vi.fn();
+    const err = new ApiHttpError(401, "E_AUTH_MISSING", "Auth missing", "req-1");
+    const parsed = parseApiError(err, { onReconnectSpotify });
     expect(parsed.title).toBe("Sessão expirada");
     expect(parsed.description).toBe("Reconecte com o Spotify para continuar.");
     expect(parsed.status).toBe("error");
     expect(parsed.action).toBeDefined();
     expect(parsed.action?.label).toBe("Reconectar Spotify");
     expect(typeof parsed.action?.onClick).toBe("function");
+  });
+
+  it("invokes onReconnectSpotify when action.onClick is called for E_AUTH_MISSING", () => {
+    const onReconnectSpotify = vi.fn();
+    const err = new ApiHttpError(401, "E_AUTH_MISSING", "Auth missing", "req-1");
+    const parsed = parseApiError(err, { onReconnectSpotify });
+    expect(onReconnectSpotify).not.toHaveBeenCalled();
+    parsed.action?.onClick();
+    expect(onReconnectSpotify).toHaveBeenCalledTimes(1);
   });
 
   it("maps status 429 with retryAfter to rate-limit warning including seconds", () => {
@@ -80,12 +110,16 @@ describe("parseApiError", () => {
     expect(parsed.status).toBe("warning");
   });
 
-  it("falls back to generic error for unknown errors", () => {
+  it("falls back to generic error for unknown errors and logs to console.error", () => {
     const err = new Error("Something weird");
     const parsed = parseApiError(err);
     expect(parsed.title).toBe("Erro");
     expect(parsed.description).toBe("Something weird");
     expect(parsed.status).toBe("error");
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[parseApiError] Unclassified error",
+      err,
+    );
   });
 
   it("falls back to 'Erro desconhecido' when err has no message", () => {
@@ -93,5 +127,9 @@ describe("parseApiError", () => {
     expect(parsed.title).toBe("Erro");
     expect(parsed.description).toBe("Erro desconhecido");
     expect(parsed.status).toBe("error");
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[parseApiError] Unclassified error",
+      null,
+    );
   });
 });
