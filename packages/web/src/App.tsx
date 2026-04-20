@@ -1,5 +1,11 @@
 import {
+  Alert,
+  AlertDescription,
+  AlertIcon,
+  AlertTitle,
   Box,
+  Button,
+  CloseButton,
   Container,
   Heading,
   Tab,
@@ -12,13 +18,14 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import type { GenerateResponse, PromptSource } from "@kratos-suno/core";
+import { ApiHttpError, type GenerateResponse, type PromptSource } from "@kratos-suno/core";
 import { api } from "./apiClient";
 import { AudioUpload } from "./components/AudioUpload";
 import { ResultsDisplay } from "./components/ResultsDisplay";
 import { SavedPromptsList } from "./components/SavedPromptsList";
 import { SpotifyTab } from "./components/SpotifyTab";
 import { TextInput } from "./components/TextInput";
+import { parseApiError } from "./lib/parseApiError";
 
 interface ResultState {
   result: GenerateResponse;
@@ -48,13 +55,54 @@ export default function App() {
   }, [toast]);
 
   const handleError = (err: unknown) => {
-    const message = err instanceof Error ? err.message : "Erro desconhecido";
+    const parsed = parseApiError(err);
+    const requestId = err instanceof ApiHttpError ? err.requestId : undefined;
     toast({
-      title: "Erro",
-      description: message,
-      status: "error",
-      duration: 5000,
+      duration: 6000,
       isClosable: true,
+      position: "top",
+      render: ({ onClose }) => (
+        <Alert
+          status={parsed.status}
+          variant="solid"
+          borderRadius="md"
+          alignItems="flex-start"
+          pr={8}
+          role="alert"
+        >
+          <AlertIcon />
+          <Box flex="1">
+            <AlertTitle>{parsed.title}</AlertTitle>
+            <AlertDescription display="block" fontSize="sm">
+              {parsed.description}
+              {requestId && (
+                <Text as="span" display="block" fontSize="xs" opacity={0.75} mt={1}>
+                  ID: {requestId.slice(0, 8)}
+                </Text>
+              )}
+            </AlertDescription>
+            {parsed.action && (
+              <Button
+                mt={2}
+                size="sm"
+                colorScheme="whiteAlpha"
+                onClick={() => {
+                  parsed.action?.onClick();
+                  onClose();
+                }}
+              >
+                {parsed.action.label}
+              </Button>
+            )}
+          </Box>
+          <CloseButton
+            position="absolute"
+            right={1}
+            top={1}
+            onClick={onClose}
+          />
+        </Alert>
+      ),
     });
   };
 

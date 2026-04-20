@@ -22,6 +22,8 @@ export class ApiHttpError extends Error {
     public readonly code: string | undefined,
     message: string,
     public readonly requestId?: string,
+    /** Segundos de espera antes de nova tentativa (extraído do header `Retry-After` em respostas 429). */
+    public readonly retryAfter?: number,
   ) {
     super(message);
     this.name = "ApiHttpError";
@@ -109,7 +111,13 @@ export async function request<T>(
     } catch {
       // resposta não é JSON
     }
-    throw new ApiHttpError(res.status, code, detail, requestId);
+    // RFC 7231: Retry-After é inteiro em segundos (ignoramos formato HTTP-date por simplicidade).
+    const retryAfterRaw = res.headers.get("retry-after");
+    const retryAfter =
+      retryAfterRaw !== null && /^\d+$/.test(retryAfterRaw)
+        ? parseInt(retryAfterRaw, 10)
+        : undefined;
+    throw new ApiHttpError(res.status, code, detail, requestId, retryAfter);
   }
 
   if (res.status === 204) {
