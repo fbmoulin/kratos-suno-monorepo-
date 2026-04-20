@@ -134,7 +134,7 @@ function SavedPromptCard({
       <HStack justify="space-between" mb={2}>
         <VStack align="start" spacing={0}>
           <HStack>
-            <Heading size="sm" noOfLines={1}>
+            <Heading size="sm" noOfLines={1} minW={0}>
               {prompt.subject}
             </Heading>
             <Badge>{SOURCE_LABELS[prompt.source] || prompt.source}</Badge>

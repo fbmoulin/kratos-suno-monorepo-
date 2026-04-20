@@ -121,7 +121,7 @@ export function SpotifyTab({ onChooseArtist }: Props) {
             size="sm"
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as SpotifyTimeRange)}
-            maxW="200px"
+            maxW={{ base: "full", sm: "200px" }}
           >
             {Object.entries(TIME_RANGE_LABELS).map(([k, label]) => (
               <option key={k} value={k}>

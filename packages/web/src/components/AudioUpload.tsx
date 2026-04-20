@@ -61,7 +61,7 @@ export function AudioUpload({ onSubmit, isLoading }: Props) {
         <FormLabel>Arquivo de áudio</FormLabel>
         <Box
           {...getRootProps()}
-          p={8}
+          p={{ base: 4, md: 8 }}
           borderWidth={2}
           borderStyle="dashed"
           borderColor={isDragActive ? "brand.500" : "gray.500"}

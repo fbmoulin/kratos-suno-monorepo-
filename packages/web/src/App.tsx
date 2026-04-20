@@ -97,13 +97,13 @@ export default function App() {
   };
 
   return (
-    <Container maxW="3xl" py={10}>
+    <Container maxW={{ base: "full", md: "3xl" }} px={{ base: 4, md: 0 }} py={{ base: 6, md: 10 }}>
       <VStack spacing={8} align="stretch">
         <Box textAlign="center">
-          <Heading size="xl" mb={2}>
+          <Heading size={{ base: "lg", md: "xl" }} mb={2}>
             🎵 Kratos Suno Prompt
           </Heading>
-          <Text color="gray.400">
+          <Text color="gray.400" fontSize={{ base: "sm", md: "md" }}>
             Gere prompts profissionais para Suno AI a partir de nome, áudio ou seu Spotify
           </Text>
         </Box>

@@ -83,7 +83,7 @@ function VariantCard({ variant }: { variant: SunoPromptVariant }) {
     >
       <HStack justify="space-between" mb={2}>
         <HStack>
-          <Text fontSize="xl">{config.emoji}</Text>
+          <Text fontSize={{ base: "md", md: "xl" }}>{config.emoji}</Text>
           <VStack align="start" spacing={0}>
             <Heading size="sm">{config.label}</Heading>
             <Text fontSize="xs" color="gray.400">
