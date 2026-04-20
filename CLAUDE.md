@@ -80,7 +80,8 @@ Session persistence: `PersistentSessionStore` (Postgres) hidrata in-memory cache
 
 **Wave 2a concluída — MVP webapp focus (2026-04-18):**
 - ✅ Error boundaries web — `packages/web/src/components/ErrorBoundary.tsx` envolvendo `<App />` no `main.tsx`
-- ✅ Frontend tests — vitest + testing-library + jsdom, 8/8 tests green (5 ErrorBoundary + 3 App smoke)
+- ✅ Frontend tests — vitest + testing-library + jsdom, 9/9 tests green (6 ErrorBoundary + 3 App smoke)
+- ✅ Web lint — ESLint flat config mínima no `packages/web/`, `pnpm --filter @kratos-suno/web lint` green
 - Commit: `c8b6fc6 test(web): wave 2a — ErrorBoundary + vitest + 8 tests (MVP webapp)`
 
 **Imediato (MVP blockers, não-agent):**
@@ -93,8 +94,7 @@ Session persistence: `PersistentSessionStore` (Postgres) hidrata in-memory cache
 - Accessibility labels mobile (zero → completo) — mobile não é MVP target
 - Theme mobile bypass fix (hardcodes `#0a0a0a` → `theme.colors.*`)
 - Error boundaries mobile (Expo)
-- Expandir cobertura de testes web (atualmente 8 tests; meta pós-MVP ~20)
-- ESLint config no `packages/web/` (script existe mas binário ausente — script `lint` falha)
+- Expandir cobertura de testes web (atualmente 9 tests; meta pós-MVP ~20)
 
 **Deploy quando quiser:**
 ```bash

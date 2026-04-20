@@ -16,17 +16,19 @@ Semver: [semver.org](https://semver.org/spec/v2.0.0.html).
 - `packages/web/src/main.tsx` — wraps `<App />` em `<ErrorBoundary>`
 - `packages/web/vitest.config.ts` + `src/test/setup.ts` + `src/test/test-utils.tsx` — infra vitest (jsdom + testing-library + renderWithProviders helper com ChakraProvider)
 - `packages/web/src/App.test.tsx` — 3 smoke tests (título + tabs, OAuth callback auto-switch, disclaimer 200-char)
-- `packages/web/src/components/ErrorBoundary.test.tsx` — 5 tests cobrindo: children render normal, fallback em erro, `onError` callback, reset button, custom fallback prop
+- `packages/web/src/components/ErrorBoundary.test.tsx` — 6 tests cobrindo: children render normal, fallback em erro, `onError` callback, retry sem mudar causa, recuperação real após remover a causa, custom fallback prop
+- `packages/web/eslint.config.mjs` — configuração ESLint flat mínima para TypeScript + React hooks no pacote web
 
 #### Dev deps
-- `vitest ^2.1.2`, `@testing-library/{react,jest-dom,user-event}`, `jsdom ^25.0.1` (+84 packages transitivos)
+- `vitest ^2.1.2`, `@testing-library/{react,jest-dom,user-event}`, `jsdom ^25.0.1`, `eslint ^9`, `@eslint/js`, `typescript-eslint`, `eslint-plugin-react-hooks`, `globals`
 
 #### Scripts
 - `pnpm --filter @kratos-suno/web test` / `test:watch`
 
 #### Verificação
-- Web tests: **8/8 passed**
+- Web tests: **9/9 passed**
 - Web typecheck: ✅ clean
+- Web lint: ✅ clean
 - Web build: ✅ success (530KB gzip — warning pré-existente, não relacionado)
 - Backend: 90/90 still green (zero regression)
 - CDK: 3/3 tests + `pnpm synth` clean → deploy path staging validado

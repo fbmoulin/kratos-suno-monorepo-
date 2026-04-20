@@ -35,7 +35,6 @@ export class ErrorBoundary extends Component<
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     // Log to console for dev; production hook for e.g. Sentry goes here
-    // eslint-disable-next-line no-console
     console.error("[ErrorBoundary]", error, info.componentStack);
     this.props.onError?.(error, info);
   }

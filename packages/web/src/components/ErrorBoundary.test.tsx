@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen, userEvent } from "../test/test-utils";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { useState } from "react";
 
 function Bomb({ shouldExplode }: { shouldExplode: boolean }) {
   if (shouldExplode) {
@@ -47,7 +48,7 @@ describe("ErrorBoundary", () => {
     spy.mockRestore();
   });
 
-  it("reset button clears error state when child becomes safe", async () => {
+  it("keeps showing fallback when retrying without changing the failing cause", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const user = userEvent.setup();
 
@@ -62,16 +63,44 @@ describe("ErrorBoundary", () => {
     renderWithProviders(<Controlled />);
     expect(screen.getByText("Algo deu errado")).toBeInTheDocument();
 
-    // Click reset — boundary clears state; Bomb re-renders and throws again
-    // (this specific scenario is the "try again with same failing cause" path
-    // which stays in error state; covered below is the click-works assertion)
     await user.click(
       screen.getByRole("button", { name: /tentar novamente/i }),
     );
 
-    // Component still throws on re-render, so error UI stays visible
     expect(screen.getByText("Algo deu errado")).toBeInTheDocument();
 
+    spy.mockRestore();
+  });
+
+  it("recovers when the failing cause is removed before reset", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const user = userEvent.setup();
+
+    function Recoverable() {
+      const [shouldExplode, setShouldExplode] = useState(true);
+
+      return (
+        <ErrorBoundary
+          fallback={(_error, reset) => (
+            <button
+              onClick={() => {
+                setShouldExplode(false);
+                reset();
+              }}
+            >
+              Recover
+            </button>
+          )}
+        >
+          <Bomb shouldExplode={shouldExplode} />
+        </ErrorBoundary>
+      );
+    }
+
+    renderWithProviders(<Recoverable />);
+    await user.click(screen.getByRole("button", { name: "Recover" }));
+
+    expect(screen.getByText("Safe content")).toBeInTheDocument();
     spy.mockRestore();
   });
 
