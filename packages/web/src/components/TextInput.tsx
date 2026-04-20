@@ -43,6 +43,7 @@ export function TextInput({ onSubmit, isLoading }: Props) {
             placeholder="Ex: Coldplay, Bohemian Rhapsody, Djavan"
             size="lg"
             isDisabled={isLoading}
+            isInvalid={isWarning}
             maxLength={MAX_SUBJECT_LENGTH}
             autoFocus
           />
@@ -54,6 +55,8 @@ export function TextInput({ onSubmit, isLoading }: Props) {
             <Text
               data-testid="subject-char-counter"
               data-warning={isWarning ? "true" : undefined}
+              role="status"
+              aria-live="polite"
               fontSize="xs"
               color={isWarning ? "red.400" : "gray.400"}
               flexShrink={0}

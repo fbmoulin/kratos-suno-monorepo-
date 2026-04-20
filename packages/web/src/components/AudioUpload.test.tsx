@@ -88,6 +88,36 @@ describe("AudioUpload", () => {
     });
   });
 
+  it("clears previously accepted file when a subsequent drop is rejected", async () => {
+    renderWithProviders(
+      <AudioUpload onSubmit={vi.fn()} isLoading={false} />,
+    );
+
+    // Step 1: drop a valid MP3, expect filename visible + submit enabled
+    const goodFile = new File(["dummy"], "song.mp3", { type: "audio/mpeg" });
+    await dropFile(goodFile);
+
+    await waitFor(() => {
+      expect(screen.getByText(/song\.mp3/)).toBeInTheDocument();
+    });
+    const submitButton = screen.getByRole("button", {
+      name: /Analisar e gerar prompts/i,
+    });
+    expect(submitButton).not.toBeDisabled();
+
+    // Step 2: drop an invalid .txt, expect previous filename cleared + error shown
+    const badFile = new File(["dummy"], "notes.txt", { type: "text/plain" });
+    await dropFile(badFile);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Formato não suportado/i),
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/song\.mp3/)).toBeNull();
+    expect(submitButton).toBeDisabled();
+  });
+
   it("sets maxLength=200 on the user hint input", () => {
     renderWithProviders(
       <AudioUpload onSubmit={vi.fn()} isLoading={false} />,

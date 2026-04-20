@@ -34,19 +34,17 @@ export function AudioUpload({ onSubmit, isLoading }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
+    // Size/type enforced via useDropzone's maxSize+accept config, which route
+    // invalid files to onDropRejected. This callback only handles valid drops.
     setError(null);
     const f = acceptedFiles[0];
-    if (!f) return;
-    // Defensive: dropzone's maxSize routes oversized files to onDropRejected,
-    // but keep the manual check as belt-and-suspenders.
-    if (f.size > MAX_SIZE_MB * 1024 * 1024) {
-      setError(`Arquivo excede ${MAX_SIZE_MB}MB`);
-      return;
-    }
-    setFile(f);
+    if (f) setFile(f);
   }, []);
 
   const onDropRejected = useCallback((rejections: FileRejection[]) => {
+    // Invalidate any previously accepted file so stale state can't be submitted
+    // alongside the new error banner.
+    setFile(null);
     const reason = rejections[0]?.errors[0];
     if (reason?.code === "file-invalid-type") {
       setError(
