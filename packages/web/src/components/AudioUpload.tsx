@@ -10,6 +10,7 @@ import {
 } from "@chakra-ui/react";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { AudioLoadingStatus } from "./AudioLoadingStatus";
 
 interface Props {
   onSubmit: (file: File, userHint?: string) => void;
@@ -118,6 +119,8 @@ export function AudioUpload({ onSubmit, isLoading }: Props) {
       >
         Analisar e gerar prompts
       </Button>
+
+      <AudioLoadingStatus isLoading={isLoading} />
     </VStack>
   );
 }
