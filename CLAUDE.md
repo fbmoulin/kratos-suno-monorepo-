@@ -10,11 +10,19 @@ Monorepo pnpm. Gerador de prompts Suno AI a partir de nome/MP3/Spotify. Fork ada
 - **Shared TS**: `@kratos-suno/core` em `packages/core/` (types, API client factory, useAuth hook)
 - **Infra**: AWS CDK TS — App Runner + ECR + Secrets Manager + CloudWatch + Neon PG
 
-## Current state (2026-04-18)
+## Current state (2026-04-20)
 
-**Wave 1 concluída** — 33 commits em master desde import v0.3.0. Stack full validated end-to-end via docker-compose.dev.yml + real Anthropic API (Djavan e Anitta geraram prompts corretos, 0 vazamentos de copyright).
+**Wave 2b 4/5 concluída** — MVP public-ready web fixes em andamento. Deep analysis score pre-2b: web 6/10, backend 8/10, infra 8/10. Rota B (ship this week) escolhida.
 
-**Tests:** 90/90 backend pytest + 3/3 CDK jest + 0 erros TS typecheck em core/mobile/web.
+**Shipped Wave 2b (on main, pushed):**
+- `e35987b` — 2b.1 mobile responsive breakpoints
+- `cc0aa2b` — 2b.2 audio loading UX (timer + rotating status)
+- `00bde9e` + `056761b` — 2b.3 error classification (parseApiError, 9 branches PT-BR, ApiHttpError.retryAfter, useAuth.loginWithSpotify wiring)
+- `a818b4d` + `6a8f0a3` — 2b.4 form validation (maxLength=200 + MIME rejection + a11y aria-live + stale file clearing)
+
+**Pending Wave 2b:** 2b.5 Playwright E2E + 2b.6 final docs/review.
+
+**Tests:** 90/90 backend pytest unchanged · **37/37 web unit** (was 13 at Wave 2b start, +24) · 3/3 CDK jest · 0 erros TS typecheck em core/mobile/web.
 
 **Runtime local validado:**
 ```bash
@@ -78,11 +86,23 @@ Session persistence: `PersistentSessionStore` (Postgres) hidrata in-memory cache
 
 ## Pending / Next steps
 
-**Wave 2a concluída — MVP webapp focus (2026-04-18):**
-- ✅ Error boundaries web — `packages/web/src/components/ErrorBoundary.tsx` envolvendo `<App />` no `main.tsx`
-- ✅ Frontend tests — vitest + testing-library + jsdom, 9/9 tests green (6 ErrorBoundary + 3 App smoke)
-- ✅ Web lint — ESLint flat config mínima no `packages/web/`, `pnpm --filter @kratos-suno/web lint` green
-- Commit: `c8b6fc6 test(web): wave 2a — ErrorBoundary + vitest + 8 tests (MVP webapp)`
+**Wave 2b em andamento (2026-04-20 — 4/5 done):**
+- ✅ 2b.1 Mobile responsive — `e35987b`
+- ✅ 2b.2 Audio loading UX — `cc0aa2b`
+- ✅ 2b.3 Error classification — `00bde9e` + `056761b`
+- ✅ 2b.4 Form validation — `a818b4d` + `6a8f0a3`
+- ⏸️ 2b.5 Playwright E2E Spotify OAuth — backend `spotify_mock_mode` + Playwright setup + 1 E2E spec (~3-4h)
+- ⏸️ 2b.6 Final docs + code review — CHANGELOG já atualizado; pendente full-wave review pass
+
+**Como retomar Wave 2b.5:**
+1. `cd /home/fbmoulin/projetos-2026/kratos-suno-monorepo-v0.3.0/kratos-suno-monorepo`
+2. `git log --oneline -5` — confirmar tip `6a8f0a3` (ou mais recente com docs)
+3. Plan: `docs/superpowers/plans/2026-04-20-wave-2b-web-p0-fixes.md` seção "Fix 5"
+4. Usar skill `superpowers:subagent-driven-development` com modelo implementer → spec reviewer → code quality reviewer
+5. E2E requer backend rodando com `SPOTIFY_MOCK_MODE=true` — docker-compose up OU uvicorn local na :8000
+6. **Observação**: working tree pode ter staging uncommitted de tentativa parcial anterior (backend/app/config.py, spotify_client.py, playwright.config.ts) — revisar se existe e decidir manter/discard antes de dispatchar
+
+**Wave 2a concluída (2026-04-18):** error boundaries + vitest setup + ESLint flat config. Commit `c8b6fc6`.
 
 **Imediato (MVP blockers, não-agent):**
 - Preencher `ANTHROPIC_API_KEY` real em `.env` (gitignored) para smoke local
@@ -94,7 +114,7 @@ Session persistence: `PersistentSessionStore` (Postgres) hidrata in-memory cache
 - Accessibility labels mobile (zero → completo) — mobile não é MVP target
 - Theme mobile bypass fix (hardcodes `#0a0a0a` → `theme.colors.*`)
 - Error boundaries mobile (Expo)
-- Expandir cobertura de testes web (atualmente 9 tests; meta pós-MVP ~20)
+- ~~Expandir cobertura de testes web~~ — **atingido em Wave 2b**: 9 → 37 tests
 
 **Deploy quando quiser:**
 ```bash

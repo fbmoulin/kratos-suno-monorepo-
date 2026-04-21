@@ -7,6 +7,55 @@ Semver: [semver.org](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Wave 2b — 2026-04-20 (Web P0 fixes — public MVP readiness)
+
+**Context:** Deep analysis scored webapp 6/10 MVP-ready (backend 8/10, infra 8/10). Chose Rota B (ship this week). 5 sequential P0 fixes + docs; **4 of 5 done, 2b.5 Playwright pending**. Plan: `docs/superpowers/plans/2026-04-20-wave-2b-web-p0-fixes.md`.
+
+#### Added (2b.1-2b.4)
+
+**Fix 2b.1 — Mobile responsive breakpoints** (`e35987b`)
+- `Container maxW={{ base: "full", md: "3xl" }}` + `px={{ base: 4, md: 0 }}` em App.tsx
+- Heading/Text responsive `fontSize` across App/ResultsDisplay/SavedPromptsList
+- `SpotifyTab Select maxW={{ base: "full", sm: "200px" }}` + AudioUpload dropzone `p={{ base: 4, md: 8 }}`
+- `minW={0}` em Headings truncadas
+
+**Fix 2b.2 — Audio loading UX** (`cc0aa2b`)
+- `packages/web/src/components/AudioLoadingStatus.tsx` — banner "Isso pode levar 30-40 segundos" + rotating status messages (5s intervals: "Extraindo áudio" → "Analisando estilo" → "Gerando prompts") + elapsed timer `⏱ Ns`
+- 4 novos tests: render guard (isLoading=false), initial state, rotation + timer increments, cleanup on unmount
+
+**Fix 2b.3 — Error classification + typed ApiHttpError** (`00bde9e` + `056761b`)
+- `packages/core/src/api/http.ts`: `ApiHttpError` extendido com 5º param opcional `retryAfter?: number`; `request()` lê header `Retry-After` (regex `/^\d+$/`) no branch 4xx/5xx — backward-compat em todos callsites
+- `packages/web/src/lib/parseApiError.ts` — função pura mapeando 9 branches PT-BR: `E_AUTH_MISSING`/`E_TIMEOUT`/`E_NETWORK`/`E_BUDGET_EXCEEDED`/`429`/`400`/`413`/`502` + fallback. Action button injection via `ParseApiErrorOptions.onReconnectSpotify` (callback pattern, mantém função pura)
+- `packages/web/src/App.tsx`: `handleError` usa `parseApiError` + Chakra toast `render` prop com Alert + action button; `requestId` full (sem truncation) mostrado como muted text; `useAuth().loginWithSpotify` injetado no callback
+- Fallback branch loga `console.error("[parseApiError] Unclassified error", err)` para debug prod
+- 13 testes parseApiError + 1 integration test em App.test.tsx (400 path via mock rejection)
+
+**Fix 2b.4 — Form validation (maxLength + MIME)** (`a818b4d` + `6a8f0a3`)
+- `packages/web/src/components/TextInput.tsx`: `maxLength={200}` no Input (match backend `Field(..., max_length=200)` em `schemas/sonic_dna.py:140`) + live char counter `N/200` com `color="red.400"` quando > 180, `role="status"` + `aria-live="polite"` + Chakra `isInvalid={isWarning}` (emite `aria-invalid` nativo no DOM)
+- `packages/web/src/components/AudioUpload.tsx`: `useDropzone` ganha `maxSize` config; `onDropRejected` callback mapeia `file-invalid-type` → "Formato não suportado. Use MP3, WAV, FLAC, M4A ou OGG." e `file-too-large` → "Arquivo excede 25MB" (PT-BR); `userHint` Input ganha `maxLength={200}` (match backend `Form(default=None, max_length=200)`); `setFile(null)` em `onDropRejected` limpa estado stale (evita submissão acidental de arquivo anterior após rejeição); manual size check em `onDrop` removido (dead code pós-`maxSize` config)
+- 4 testes TextInput (counter render/update/warning state via `data-warning`/`maxLength` attr, aria-live announcement) + 4 testes AudioUpload (accept MP3, reject .txt, reject 26MB, userHint maxLength) + 2 regression tests (stale file cleared on rejection, a11y attributes)
+
+#### Deferred to 2b.5 + 2b.6
+
+- Playwright E2E Spotify OAuth — backend `spotify_mock_mode` + `SpotifyClient` short-circuits + `@playwright/test` setup + first E2E spec com `page.route()` interceptando Spotify authorize URL
+- Docs + final code review — consolidar CHANGELOG + CLAUDE.md + requesting-code-review final pass
+
+#### Verificação (Wave 2b.1-2b.4)
+
+- Web unit tests: **37/37** passed (was 13/13 at start of Wave 2b; +24 net)
+  - Novos: 4 AudioLoadingStatus, 13 parseApiError, 1 App integration, 4 TextInput, 4 AudioUpload, 2 regression
+- Web typecheck: ✅ clean (core + web + mobile — `ApiHttpError` extension backward-compat)
+- Web lint: ✅ clean (`--max-warnings 0`)
+- Web build: ✅ success (bundle ~533KB, unchanged)
+- Backend: 90/90 unchanged (no backend changes in 2b.1-2b.4)
+
+#### Review process validation
+
+- Subagent-driven-development workflow usado em 2b.3 + 2b.4: implementer → spec reviewer → code quality reviewer → fix pass → re-review
+- **2b.3 crítico capturado**: `spotifyLoginRedirect` apontava pro endpoint JSON em vez do fluxo OAuth — corrigido via callback injection
+- **2b.4 crítico capturado**: stale file no `onDropRejected` permitia submissão acidental do arquivo anterior após rejeição — corrigido
+- Spec compliance review e code quality review dão sinais distintos; manter ambos
+
 ### Wave 2a — 2026-04-18 (MVP webapp focus)
 
 **Reframe:** user decidiu pivot pra webapp full-stack como MVP; mobile a11y + theme fixes deferidos pós-MVP. Spotify deep link (Wave 1) mantido já que tá shipado.
