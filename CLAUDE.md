@@ -10,19 +10,22 @@ Monorepo pnpm. Gerador de prompts Suno AI a partir de nome/MP3/Spotify. Fork ada
 - **Shared TS**: `@kratos-suno/core` em `packages/core/` (types, API client factory, useAuth hook)
 - **Infra**: AWS CDK TS — App Runner + ECR + Secrets Manager + CloudWatch + Neon PG
 
-## Current state (2026-04-20)
+## Current state (2026-04-30)
 
-**Wave 2b 4/5 concluída** — MVP public-ready web fixes em andamento. Deep analysis score pre-2b: web 6/10, backend 8/10, infra 8/10. Rota B (ship this week) escolhida.
+**Wave 2b 5/5 CONCLUÍDA** — MVP public-ready web fixes done. Deep analysis score pre-2b: web 6/10, backend 8/10, infra 8/10. Rota B (ship this week) escolhida e cumprida.
 
-**Shipped Wave 2b (on main, pushed):**
+**Shipped Wave 2b (on main, local — push pending):**
 - `e35987b` — 2b.1 mobile responsive breakpoints
 - `cc0aa2b` — 2b.2 audio loading UX (timer + rotating status)
 - `00bde9e` + `056761b` — 2b.3 error classification (parseApiError, 9 branches PT-BR, ApiHttpError.retryAfter, useAuth.loginWithSpotify wiring)
 - `a818b4d` + `6a8f0a3` — 2b.4 form validation (maxLength=200 + MIME rejection + a11y aria-live + stale file clearing)
+- `7fa548d` — 2b.5 Playwright E2E Spotify OAuth + `spotify_mock_mode` (3 backend short-circuits + 3 unit tests + 1 E2E spec via `page.route()` interceptando authorize URL)
 
-**Pending Wave 2b:** 2b.5 Playwright E2E + 2b.6 final docs/review.
+**Pending Wave 2b:** 2b.6 final docs/review (CHANGELOG atualizado, este CLAUDE.md atualizado).
 
-**Tests:** 90/90 backend pytest unchanged · **37/37 web unit** (was 13 at Wave 2b start, +24) · 3/3 CDK jest · 0 erros TS typecheck em core/mobile/web.
+**Tests:** **93/93** backend pytest (+3 mock_mode) · **37/37** web unit · 3/3 CDK jest · 0 erros TS typecheck em core/mobile/web.
+
+**E2E smoke não rodado nesta sessão:** requer `pnpm exec playwright install chromium` + backend up local com `SPOTIFY_MOCK_MODE=true` (runbook em `playwright.config.ts` header).
 
 **Runtime local validado:**
 ```bash
@@ -86,21 +89,19 @@ Session persistence: `PersistentSessionStore` (Postgres) hidrata in-memory cache
 
 ## Pending / Next steps
 
-**Wave 2b em andamento (2026-04-20 — 4/5 done):**
+**Wave 2b CONCLUÍDA (2026-04-30 — 5/5):**
 - ✅ 2b.1 Mobile responsive — `e35987b`
 - ✅ 2b.2 Audio loading UX — `cc0aa2b`
 - ✅ 2b.3 Error classification — `00bde9e` + `056761b`
 - ✅ 2b.4 Form validation — `a818b4d` + `6a8f0a3`
-- ⏸️ 2b.5 Playwright E2E Spotify OAuth — backend `spotify_mock_mode` + Playwright setup + 1 E2E spec (~3-4h)
-- ⏸️ 2b.6 Final docs + code review — CHANGELOG já atualizado; pendente full-wave review pass
+- ✅ 2b.5 Playwright E2E Spotify OAuth — `7fa548d`
+- ✅ 2b.6 Final docs — CHANGELOG + CLAUDE.md atualizados nesta sessão
 
-**Como retomar Wave 2b.5:**
-1. `cd /home/fbmoulin/projetos-2026/kratos-suno-monorepo-v0.3.0/kratos-suno-monorepo`
-2. `git log --oneline -5` — confirmar tip `6a8f0a3` (ou mais recente com docs)
-3. Plan: `docs/superpowers/plans/2026-04-20-wave-2b-web-p0-fixes.md` seção "Fix 5"
-4. Usar skill `superpowers:subagent-driven-development` com modelo implementer → spec reviewer → code quality reviewer
-5. E2E requer backend rodando com `SPOTIFY_MOCK_MODE=true` — docker-compose up OU uvicorn local na :8000
-6. **Observação**: working tree pode ter staging uncommitted de tentativa parcial anterior (backend/app/config.py, spotify_client.py, playwright.config.ts) — revisar se existe e decidir manter/discard antes de dispatchar
+**Como rodar a E2E localmente:**
+1. `cd backend && pnpm exec playwright install chromium` (uma vez)
+2. Terminal 1 (backend): `SPOTIFY_MOCK_MODE=true SPOTIFY_CLIENT_ID=mock_client SPOTIFY_REDIRECT_URI=http://localhost:8000/api/v1/auth/spotify/callback FRONTEND_ORIGIN=http://localhost:5173 uvicorn app.main:app --port 8000`
+3. Terminal 2 (Playwright): `cd packages/web && pnpm test:e2e`
+4. Runbook completo em `packages/web/playwright.config.ts` header
 
 **Wave 2a concluída (2026-04-18):** error boundaries + vitest setup + ESLint flat config. Commit `c8b6fc6`.
 

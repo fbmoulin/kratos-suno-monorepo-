@@ -7,11 +7,11 @@ Semver: [semver.org](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Wave 2b — 2026-04-20 (Web P0 fixes — public MVP readiness)
+### Wave 2b — 2026-04-20 / 2026-04-30 (Web P0 fixes — public MVP readiness)
 
-**Context:** Deep analysis scored webapp 6/10 MVP-ready (backend 8/10, infra 8/10). Chose Rota B (ship this week). 5 sequential P0 fixes + docs; **4 of 5 done, 2b.5 Playwright pending**. Plan: `docs/superpowers/plans/2026-04-20-wave-2b-web-p0-fixes.md`.
+**Context:** Deep analysis scored webapp 6/10 MVP-ready (backend 8/10, infra 8/10). Chose Rota B (ship this week). 5 sequential P0 fixes + docs; **5/5 done (2b.5 closed 2026-04-30)**. Plan: `docs/superpowers/plans/2026-04-20-wave-2b-web-p0-fixes.md`.
 
-#### Added (2b.1-2b.4)
+#### Added (2b.1-2b.5)
 
 **Fix 2b.1 — Mobile responsive breakpoints** (`e35987b`)
 - `Container maxW={{ base: "full", md: "3xl" }}` + `px={{ base: 4, md: 0 }}` em App.tsx
@@ -35,25 +35,35 @@ Semver: [semver.org](https://semver.org/spec/v2.0.0.html).
 - `packages/web/src/components/AudioUpload.tsx`: `useDropzone` ganha `maxSize` config; `onDropRejected` callback mapeia `file-invalid-type` → "Formato não suportado. Use MP3, WAV, FLAC, M4A ou OGG." e `file-too-large` → "Arquivo excede 25MB" (PT-BR); `userHint` Input ganha `maxLength={200}` (match backend `Form(default=None, max_length=200)`); `setFile(null)` em `onDropRejected` limpa estado stale (evita submissão acidental de arquivo anterior após rejeição); manual size check em `onDrop` removido (dead code pós-`maxSize` config)
 - 4 testes TextInput (counter render/update/warning state via `data-warning`/`maxLength` attr, aria-live announcement) + 4 testes AudioUpload (accept MP3, reject .txt, reject 26MB, userHint maxLength) + 2 regression tests (stale file cleared on rejection, a11y attributes)
 
-#### Deferred to 2b.5 + 2b.6
+**Fix 2b.5 — Playwright E2E Spotify OAuth + mock mode** (`7fa548d`, 2026-04-30)
+- `backend/app/config.py`: `spotify_mock_mode: bool = Field(default=False, ...)` — toggle dev/E2E only, nunca em produção
+- `backend/app/services/spotify_client.py`: short-circuit em 3 métodos (`exchange_code_for_tokens`, `get_current_user`, `get_top_artists`) — retorna fixtures determinísticas (Beatles/Radiohead/Björk + Test Artist) sem tocar `httpx`
+- `backend/tests/test_spotify_mock_mode.py` — 3 testes unit verificando short-circuit (asserção: `_http` permanece `None`, fixtures batem byte-a-byte)
+- `packages/web/playwright.config.ts` — chromium-only, `fullyParallel=false`, `webServer` boota `pnpm dev` em :5173
+- `packages/web/e2e/spotify-oauth.spec.ts` — happy path: `page.route("**/accounts.spotify.com/authorize*")` forja 302 → backend callback; assertions `Test Artist` + 3 top artists fixture renderizados
+- `packages/web/vitest.config.ts`: `include`/`exclude` explícitos para Vitest ignorar `e2e/**`
+- `packages/web/package.json`: `@playwright/test ^1.59.1` devDep + script `test:e2e`
+- `.gitignore`: `test-results/`, `playwright-report/`, `playwright/.cache/`, `.auth/`, `blob-report/`
 
-- Playwright E2E Spotify OAuth — backend `spotify_mock_mode` + `SpotifyClient` short-circuits + `@playwright/test` setup + first E2E spec com `page.route()` interceptando Spotify authorize URL
-- Docs + final code review — consolidar CHANGELOG + CLAUDE.md + requesting-code-review final pass
+**Trade-off intencional:** `page.route()` intercepta o redirect Spotify localmente em vez de mockar via fetch → permite validar todo o fluxo real do browser (cookies, redirects, useEffect callback handling) sem depender de credenciais Spotify reais ou rede externa. O único hop não-coberto é a UI da própria tela de consent do Spotify — fora de escopo MVP.
 
-#### Verificação (Wave 2b.1-2b.4)
+#### Verificação (Wave 2b.1-2b.5)
 
-- Web unit tests: **37/37** passed (was 13/13 at start of Wave 2b; +24 net)
-  - Novos: 4 AudioLoadingStatus, 13 parseApiError, 1 App integration, 4 TextInput, 4 AudioUpload, 2 regression
+- Web unit tests: **37/37** passed (was 13/13 at start of Wave 2b; +24 net) — Vitest config exclui `e2e/**`
+  - Novos 2b.1-2b.4: 4 AudioLoadingStatus, 13 parseApiError, 1 App integration, 4 TextInput, 4 AudioUpload, 2 regression
+- Backend tests: **93/93** passed (was 90/90 at start of Wave 2b; +3 net em 2b.5)
 - Web typecheck: ✅ clean (core + web + mobile — `ApiHttpError` extension backward-compat)
 - Web lint: ✅ clean (`--max-warnings 0`)
 - Web build: ✅ success (bundle ~533KB, unchanged)
-- Backend: 90/90 unchanged (no backend changes in 2b.1-2b.4)
+- Backend lint: ✅ ruff format aplicado em `config.py` + `spotify_client.py` + `test_spotify_mock_mode.py`
+- E2E smoke run: ⏸️ deferido — requer `pnpm exec playwright install chromium` + backend rodando local com `SPOTIFY_MOCK_MODE=true`
 
 #### Review process validation
 
 - Subagent-driven-development workflow usado em 2b.3 + 2b.4: implementer → spec reviewer → code quality reviewer → fix pass → re-review
 - **2b.3 crítico capturado**: `spotifyLoginRedirect` apontava pro endpoint JSON em vez do fluxo OAuth — corrigido via callback injection
 - **2b.4 crítico capturado**: stale file no `onDropRejected` permitia submissão acidental do arquivo anterior após rejeição — corrigido
+- **2b.5 trade-off documentado**: ruff format reformatou 4 linhas pré-existentes (tuple expansion, Field arg split) em `config.py` — bundle no commit Wave 2b.5 com nota explícita em vez de split em 2 commits; pure-scope discipline relaxada para sessão solo, restaura em PRs públicos
 - Spec compliance review e code quality review dão sinais distintos; manter ambos
 
 ### Wave 2a — 2026-04-18 (MVP webapp focus)
