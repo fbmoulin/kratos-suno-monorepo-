@@ -56,7 +56,7 @@ Semver: [semver.org](https://semver.org/spec/v2.0.0.html).
 - Web lint: ✅ clean (`--max-warnings 0`)
 - Web build: ✅ success (bundle ~533KB, unchanged)
 - Backend lint: ✅ ruff format aplicado em `config.py` + `spotify_client.py` + `test_spotify_mock_mode.py`
-- E2E smoke run: ⏸️ deferido — requer `pnpm exec playwright install chromium` + backend rodando local com `SPOTIFY_MOCK_MODE=true`
+- E2E smoke run: ✅ **validado 2026-04-30** — `pnpm test:e2e` passou em 1.7s; setup completo (Postgres :5433 + alembic upgrade + uvicorn local com mock_mode + Playwright chromium 1217). **Lição capturada:** runbook do `playwright.config.ts` header não menciona Postgres — DB é obrigatório porque o callback escreve em `PersistentSessionStore` antes do redirect; sem DB, `asyncpg.InvalidPasswordError` mata o callback e a E2E dá timeout em `waitForURL(/\?spotify=connected/)`.
 
 #### Review process validation
 

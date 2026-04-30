@@ -25,7 +25,7 @@ Monorepo pnpm. Gerador de prompts Suno AI a partir de nome/MP3/Spotify. Fork ada
 
 **Tests:** **93/93** backend pytest (+3 mock_mode) · **37/37** web unit · 3/3 CDK jest · 0 erros TS typecheck em core/mobile/web.
 
-**E2E smoke não rodado nesta sessão:** requer `pnpm exec playwright install chromium` + backend up local com `SPOTIFY_MOCK_MODE=true` (runbook em `playwright.config.ts` header).
+**E2E smoke validado 2026-04-30:** `pnpm test:e2e` passou em 1.7s contra backend local (uvicorn :8000, `SPOTIFY_MOCK_MODE=true`) + Postgres :5433 via `docker compose -f docker-compose.dev.yml up -d postgres` + `alembic upgrade head` (003_user_session). **Pré-requisito não-óbvio:** Postgres é obrigatório porque `auth_spotify` callback escreve em `PersistentSessionStore` antes de redirect — rodar uvicorn sem DB resulta em `asyncpg.InvalidPasswordError` no callback e `waitForURL` da E2E timeout.
 
 **Runtime local validado:**
 ```bash
@@ -97,11 +97,13 @@ Session persistence: `PersistentSessionStore` (Postgres) hidrata in-memory cache
 - ✅ 2b.5 Playwright E2E Spotify OAuth — `7fa548d`
 - ✅ 2b.6 Final docs — CHANGELOG + CLAUDE.md atualizados nesta sessão
 
-**Como rodar a E2E localmente:**
-1. `cd backend && pnpm exec playwright install chromium` (uma vez)
-2. Terminal 1 (backend): `SPOTIFY_MOCK_MODE=true SPOTIFY_CLIENT_ID=mock_client SPOTIFY_REDIRECT_URI=http://localhost:8000/api/v1/auth/spotify/callback FRONTEND_ORIGIN=http://localhost:5173 uvicorn app.main:app --port 8000`
-3. Terminal 2 (Playwright): `cd packages/web && pnpm test:e2e`
-4. Runbook completo em `packages/web/playwright.config.ts` header
+**Como rodar a E2E localmente (validado 2026-04-30):**
+1. `cd packages/web && pnpm exec playwright install chromium` (uma vez)
+2. `docker compose -f docker-compose.dev.yml up -d postgres` (host port 5433, **obrigatório**)
+3. `cd backend && DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/kratos_suno alembic upgrade head` (uma vez)
+4. Terminal 1 (backend): `DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/kratos_suno SPOTIFY_MOCK_MODE=true SPOTIFY_CLIENT_ID=mock_client SPOTIFY_REDIRECT_URI=http://localhost:8000/api/v1/auth/spotify/callback FRONTEND_ORIGIN=http://localhost:5173 ANTHROPIC_API_KEY=mock_key uvicorn app.main:app --port 8000`
+5. Terminal 2 (Playwright): `cd packages/web && pnpm test:e2e`
+6. Runbook completo em `packages/web/playwright.config.ts` header (faltava menção ao Postgres — corrigir num próximo commit se quiser)
 
 **Wave 2a concluída (2026-04-18):** error boundaries + vitest setup + ESLint flat config. Commit `c8b6fc6`.
 
