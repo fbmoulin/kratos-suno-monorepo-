@@ -13,6 +13,7 @@ Portanto, o Spotify aqui serve APENAS para:
 A partir dessa lista de artistas, o usuário pode escolher um e gerar
 prompt via o fluxo /generate/text padrão.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -46,6 +47,7 @@ class SpotifyAPIError(Exception):
 # ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
+
 
 class SpotifyClient:
     """Wrapper stateless de chamadas à Spotify Web API.
@@ -109,6 +111,14 @@ class SpotifyClient:
         Spotify enforces exact equality of redirect_uri between authorize and
         token steps.
         """
+        # Wave 2b.5: short-circuit for Playwright E2E (no real Spotify HTTP).
+        if settings.spotify_mock_mode:
+            return {
+                "access_token": "mock_access",
+                "refresh_token": "mock_refresh",
+                "expires_in": 3600,
+                "scope": "user-top-read",
+            }
         assert self._http is not None
         data = {
             "grant_type": "authorization_code",
@@ -172,6 +182,14 @@ class SpotifyClient:
 
     async def get_current_user(self, access_token: str) -> dict[str, Any]:
         """GET /me — perfil do usuário autenticado."""
+        # Wave 2b.5: short-circuit for Playwright E2E.
+        if settings.spotify_mock_mode:
+            return {
+                "id": "test_user",
+                "display_name": "Test Artist",
+                "images": [],
+                "country": "BR",
+            }
         assert self._http is not None
         resp = await self._http.get(
             f"{settings.spotify_api_base}/me",
@@ -194,6 +212,28 @@ class SpotifyClient:
             medium_term = últimos 6 meses (default)
             long_term   = vários anos
         """
+        # Wave 2b.5: short-circuit for Playwright E2E.
+        if settings.spotify_mock_mode:
+            return [
+                SpotifyArtist(
+                    spotify_id="mock_beatles",
+                    name="The Beatles",
+                    genres=["rock", "british invasion", "classic rock"],
+                    image_url=None,
+                ),
+                SpotifyArtist(
+                    spotify_id="mock_radiohead",
+                    name="Radiohead",
+                    genres=["alternative rock", "art rock", "electronic"],
+                    image_url=None,
+                ),
+                SpotifyArtist(
+                    spotify_id="mock_bjork",
+                    name="Björk",
+                    genres=["art pop", "electronic", "experimental"],
+                    image_url=None,
+                ),
+            ]
         assert self._http is not None
         resp = await self._http.get(
             f"{settings.spotify_api_base}/me/top/artists",

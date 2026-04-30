@@ -4,6 +4,7 @@ Padrão ModelRoleConfig (inspirado em pseuno-ai): cada papel do pipeline
 tem seu modelo configurável. Assim você pode usar Haiku para extração
 barata e Sonnet para interpretação de áudio, por exemplo.
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -61,7 +62,13 @@ class Settings(BaseSettings):
     # Uploads
     # -----------------------------------------------------------------------
     max_audio_upload_mb: int = 25
-    allowed_audio_extensions: tuple[str, ...] = (".mp3", ".wav", ".flac", ".m4a", ".ogg")
+    allowed_audio_extensions: tuple[str, ...] = (
+        ".mp3",
+        ".wav",
+        ".flac",
+        ".m4a",
+        ".ogg",
+    )
 
     # -----------------------------------------------------------------------
     # Audio analysis
@@ -72,7 +79,9 @@ class Settings(BaseSettings):
     # -----------------------------------------------------------------------
     # Spotify OAuth (Fase 3)
     # -----------------------------------------------------------------------
-    spotify_client_id: str = Field(default="", description="Opcional — app funciona sem Spotify")
+    spotify_client_id: str = Field(
+        default="", description="Opcional — app funciona sem Spotify"
+    )
     spotify_redirect_uri: str = Field(
         default="",
         description="Required in production. Localhost only acceptable in dev.",
@@ -93,6 +102,14 @@ class Settings(BaseSettings):
     spotify_auth_base: str = "https://accounts.spotify.com"
     # Scopes mínimos — só leitura de top artists e profile
     spotify_scopes: tuple[str, ...] = ("user-top-read", "user-read-email")
+    spotify_mock_mode: bool = Field(
+        default=False,
+        description=(
+            "Wave 2b.5: when true, SpotifyClient short-circuits all Web API "
+            "calls and returns fixture data. Enables Playwright E2E without "
+            "hitting real Spotify. Never enable in production."
+        ),
+    )
 
     # -----------------------------------------------------------------------
     # Sessions (in-memory, TTL em segundos)
@@ -109,7 +126,9 @@ class Settings(BaseSettings):
     # -----------------------------------------------------------------------
     # Infra (W1-A): pluggable backends for stage 1→4
     # -----------------------------------------------------------------------
-    auth_provider: Literal["none", "shared_secret", "clerk", "api_key"] = "shared_secret"
+    auth_provider: Literal["none", "shared_secret", "clerk", "api_key"] = (
+        "shared_secret"
+    )
     rate_limit_backend: Literal["memory", "redis"] = "memory"
     budget_backend: Literal["memory", "redis", "postgres"] = "memory"
 

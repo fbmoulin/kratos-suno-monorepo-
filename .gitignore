@@ -63,3 +63,10 @@ backend/prompt_lab/results/*.csv
 # ---- Logs ----
 *.log
 logs/
+
+# ---- Playwright (Wave 2b.5) ----
+test-results/
+playwright-report/
+playwright/.cache/
+.auth/
+blob-report/
